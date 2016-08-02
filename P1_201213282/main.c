@@ -20,13 +20,24 @@ if(comprobante==1){ char *sec1;
 sec = strtok(prin,"::");
 sec1= strtok(NULL," ");
 ter = strtok(sec1,":");
-if(strcmp(sec,"-size")==0){
-int num=0;
-num = atoi(&ter);
-printf("\n%d y otro:%s",num,ter);
-}else if(strcmp(sec,"+unit")==0){}
-else if(strcmp(sec,"-path")==0){}
-else if(strcmp(sec,"-name")==0){}
+if(strcmp(sec,"-size")==0){// tamaño
+int num=0;// metodo para encontrar los numeros
+char newnum[20]="";
+strncpy(newnum, ter, 20);
+num = atoi(newnum);
+size = num;
+}
+else if(strcmp(sec,"+unit")==0){
+if(strcmp(ter,"m")==0){
+unit = 1;}}
+else if(strcmp(sec,"-path")==0){
+}
+else if(strcmp(sec,"-name")==0){
+char ter1;
+sec1 = strtok(ter,".");
+ter1= strtok(NULL," ");
+
+}
 else{
 printf("Error");}
 }
