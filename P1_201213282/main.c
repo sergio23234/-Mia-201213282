@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
+if(size!=0){printf("funciona");}else{printf("lolis");}
 //printf("Resultado: %s\n",cad);
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
@@ -27,16 +28,22 @@ strncpy(newnum, ter, 20);
 num = atoi(newnum);
 size = num;
 }
-else if(strcmp(sec,"+unit")==0){
+else if(strcmp(sec,"+unit")==0){//unidad
 if(strcmp(ter,"m")==0){
 unit = 1;}}
-else if(strcmp(sec,"-path")==0){
+else if(strcmp(sec,"-path")==0){//direccion de carpeta
+char* ter1 = strtok(ter,"\"");
+sec1 = strtok(NULL,"\""); //falta comprobar archivos.
 }
-else if(strcmp(sec,"-name")==0){
-char ter1;
-sec1 = strtok(ter,".");
+else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
+char* sec2 = strtok(ter,"\"");
+char *ter1 = strtok(NULL,"\"");
+char ter2[20] ="";
+strncpy(ter2,sec2,20);
+sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
-
+if(strcmp(ter1,"dsk")==0){
+nom = ter2;}
 }
 else{
 printf("Error");}
@@ -76,12 +83,15 @@ int main()
     int existe_cadena = 0;
     int con_salto = 0;
     int presiono_enter=1;
+    int temp = 0,temp1=0;
     while(presiono_enter!=0){
     if((c = getchar())!='\n'){
     if(c==92){
-      cadena[i]=' ';
+      temp = 1; temp1=i;
       con_salto = 1;}
-    else{ cadena[i]=tolower(c);}
+    else{ cadena[i]=tolower(c);
+    if(temp==1){cadena[temp1]='\\'; con_salto=0;}
+    }
     i++;
     existe_cadena = 1;}
     else{
