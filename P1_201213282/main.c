@@ -1,9 +1,101 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+void fue_fdisk(char cad[], int size, int unit, char path[], int type, int fit, int Delete,char name[], int add){
+char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
+prin = strtok(cad," ");
+otro = strtok(NULL,"\n");
+printf("\nveamos: %s",otro);
+char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
+int ver = 0;
+int comprobante = 0;
+char* aux = prin;
+while(*prin !=32&&comprobante==0){
+if(*prin==58){ver++;}
+if(ver==2){comprobante = 1;}
+prin++;}
+prin = aux;
+if(comprobante==1){ char *sec1;
+sec = strtok(prin,"::");
+sec1= strtok(NULL," ");
+ter = strtok(sec1,":");
+if(strcmp(sec,"-size")==0){// tamaño
+int num=0;// metodo para encontrar los numeros
+char newnum[20]="";
+strncpy(newnum, ter, 20);
+num = atoi(newnum);
+size = num;
+}
+else if(strcmp(sec,"+unit")==0){//unidad
+if(strcmp(ter,"m")==0){
+unit = 1;} else if(strcmp(ter,"b")==0){unit =2;}
+}
+else if(strcmp(sec,"+type")==0){//tipo
+if(strcmp(ter,"e")==0){
+type = 1;} else if(strcmp(ter,"l")==0){type=2;}
+}
+else if(strcmp(sec,"+fit")==0){//criterios para asignar espacio
+if(strcmp(ter,"ff")==0){
+fit = 1;} else if(strcmp(ter,"bf")==0){fit =2;}
+}
+else if(strcmp(sec,"-path")==0){//direccion de carpeta
+char* ter1 = strtok(ter,"\"");
+sec1 = strtok(NULL,"\""); //falta comprobar archivos.
+}
+else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
+char* sec2 = strtok(ter,"\"");
+char *ter1 = strtok(NULL,"\"");
+char ter2[20] ="";
+strncpy(ter2,sec2,20);
+sec1 = strtok(sec2,".");
+ter1= strtok(NULL," ");
+if(strcmp(ter1,"dsk")==0){
+nom = ter2;}else{
+printf("extension incorrecta");}
+}
+}
+else{
+printf("Error comando mal ingresado");}
+}
+
+}
+void fue_rmdisk(char cad[],char path[], int eliminado){
+ printf("Resultado: %s\n",cad);
+char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
+prin = strtok(cad," ");
+otro = strtok(NULL,"\n");
+char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
+int ver = 0;
+int comprobante = 0;
+char* aux = prin;
+while(*prin !=32&&comprobante==0){
+if(*prin==58){ver++;}
+if(ver==2){comprobante = 1;}
+prin++;}
+prin = aux;
+if(comprobante==1){ char *sec1;
+sec = strtok(prin,"::");
+sec1= strtok(NULL," ");
+ter = strtok(sec1,":");
+printf("\nveamos: %s",ter);
+if(strcmp(sec,"-path")==0){
+char* sec2 = strtok(ter,"\"");
+char *ter1 = strtok(NULL,"\"");
+char ter2[20] ="";
+strncpy(ter2,sec2,20);
+sec1 = strtok(sec2,".");
+ter1= strtok(NULL," ");
+if(strcmp(ter1,"dsk")==0){
+printf("\neliminara: %s",ter2);
+/* metodo para eliminar el archivo*/
+}else{
+printf("extension incorrecta");}
+}else{
+printf("comando incorrecto");}
+}
+}
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
 if(size!=0){printf("funciona");}else{printf("lolis");}
-//printf("Resultado: %s\n",cad);
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
 otro = strtok(NULL,"\n");
@@ -43,18 +135,14 @@ strncpy(ter2,sec2,20);
 sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
 if(strcmp(ter1,"dsk")==0){
-nom = ter2;}
+nom = ter2;}else{
+printf("extension incorrecta");}
+}
 }
 else{
-printf("Error");}
-}
-else{
-printf("Error");
-}
-
+printf("Error comando mal ingresado");}
 }
 void analizar_cadena(char cadena[]){
- printf("Resultado: %s\n",cadena);
  char* pch;
    pch = strtok(cadena," ");
    if(strcmp(pch,"mkdisk")==0){
@@ -63,7 +151,9 @@ void analizar_cadena(char cadena[]){
    fue_mkdisk(cadena,0,0/*Kilobytes*/,"","");
    }
    else if(strcmp(pch,"rmdisk")==0){
-   printf("rmdisk dos");}
+   pch = strtok (NULL,"\n");
+   cadena = pch;
+   fue_rmdisk(cadena,"",0);}
    else if(strcmp(pch,"fdisk")==0){
    printf("fdsik tres");}
    else if(strcmp(pch,"mount")==0){
