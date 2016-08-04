@@ -1,6 +1,71 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
+struct MBR_particion{
+char status;
+char type;
+char fit;
+int part_ini;
+int size;
+char name[16];
+}MBR_particion;
+struct Master_Boot_Record{
+int tamaio_mbr;
+int dia; int mes; int anio;
+int hora; int min;
+int mbr_disk_signature;
+struct MBR_particion particion1;
+struct MBR_particion particion2;
+struct MBR_particion particion3;
+struct MBR_particion particion4;
+}Master_Boot_Record;
+struct Extended_Boot_Record{
+char status;
+char fit;
+int inicio_E;
+int tama;
+int sig;
+char nom[16];
+}Extended_Boot_Record;
+void fue_umount(char cad[], char id[]){
+
+}
+void fue_mount(char cad[],char path[],char name[]){
+char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
+prin = strtok(cad," ");
+otro = strtok(NULL,"\n");
+printf("\nveamos: %s",otro);
+char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
+int ver = 0;
+int comprobante = 0;
+char* aux = prin;
+while(*prin !=32&&comprobante==0){
+if(*prin==58){ver++;}
+if(ver==2){comprobante = 1;}
+prin++;}
+prin = aux;
+if(comprobante==1){ char *sec1;
+sec = strtok(prin,"::");
+sec1= strtok(NULL," ");
+ter = strtok(sec1,":");
+if(strcmp(sec,"-path")==0){//direccion de carpeta
+char* ter1 = strtok(ter,"\"");
+sec1 = strtok(NULL,"\""); //falta comprobar archivos.
+}
+else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
+char* sec2 = strtok(ter,"\"");
+char *ter1 = strtok(NULL,"\"");
+char ter2[20] ="";
+strncpy(ter2,sec2,20);
+sec1 = strtok(sec2,".");
+ter1= strtok(NULL," ");
+if(strcmp(ter1,"dsk")==0){
+name = ter2;}else{
+printf("extension incorrecta");}
+}
+}
+}
 void fue_fdisk(char cad[], int size, int unit, char path[], int type, int fit, int Delete,char name[], int add){
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
@@ -50,14 +115,23 @@ strncpy(ter2,sec2,20);
 sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
 if(strcmp(ter1,"dsk")==0){
-nom = ter2;}else{
+name = ter2;}else{
 printf("extension incorrecta");}
 }
+else if(strcmp(sec,"+add")==0){// tamaño
+int num=0;// metodo para encontrar los numeros
+char newnum[20]="";
+strncpy(newnum, ter, 20);
+num = atoi(newnum);
+size = num;
+}
+}
+else if(strcmp(sec,"+delete")==0){//unidad
+if(strcmp(ter,"fast")==0){
+Delete = 1;} else if(strcmp(ter,"full")==0){Delete=2;}
 }
 else{
 printf("Error comando mal ingresado");}
-}
-
 }
 void fue_rmdisk(char cad[],char path[], int eliminado){
  printf("Resultado: %s\n",cad);
