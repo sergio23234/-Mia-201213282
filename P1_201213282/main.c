@@ -198,8 +198,27 @@ else if(strcmp(sec,"+unit")==0){//unidad
 if(strcmp(ter,"m")==0){
 unit = 1;}}
 else if(strcmp(sec,"-path")==0){//direccion de carpeta
+DIR *dirp;
+ struct dirent *direntp;
 char* ter1 = strtok(ter,"\"");
 sec1 = strtok(NULL,"\""); //falta comprobar archivos.
+sec = ter1; int dig =0;
+char cad11[100] = ""; int i =0;
+while(*sec!='\0'){
+cad11[i]=*sec;
+if(*sec=='/'){
+if(dig=!0){
+printf( "%s\n",cad11);
+dirp = opendir(cad11);
+ if (dirp == NULL){
+ mkdir(cad11,0776);
+ }}
+else{dig++;}
+}
+sec++;
+i++;
+}
+
 }
 else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
 char* sec2 = strtok(ter,"\"");
@@ -233,7 +252,9 @@ void analizar_cadena(char cadena[]){
    else if(strcmp(pch,"mount")==0){
    printf("mount cuantro");}
    else if(strcmp(pch,"umount")==0){
-   printf("umount cinco");}
+   pch = strtok (NULL,"\n");
+   cadena = pch;
+   fue_umount(cadena,"");}
    else{
         printf("error");
    }
