@@ -169,7 +169,7 @@ printf("comando incorrecto");}
 }
 }
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
-if(size!=0){printf("funciona");}else{printf("lolis");}
+if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0&&strcmp(cad,NULL)==0){printf("funciona");}
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
 otro = strtok(NULL,"\n");
@@ -193,10 +193,15 @@ char newnum[20]="";
 strncpy(newnum, ter, 20);
 num = atoi(newnum);
 size = num;
+printf("\n entro a size");
+fue_mkdisk(otro,size,unit,path,nom);
 }
 else if(strcmp(sec,"+unit")==0){//unidad
 if(strcmp(ter,"m")==0){
-unit = 1;}}
+unit = 1;}
+printf("\n entro a unit");
+fue_mkdisk(otro,size,unit,path,nom);
+}
 else if(strcmp(sec,"-path")==0){//direccion de carpeta
 DIR *dirp;
  struct dirent *direntp;
@@ -208,17 +213,19 @@ while(*sec!='\0'){
 cad11[i]=*sec;
 if(*sec=='/'){
 if(dig=!0){
-printf( "%s\n",cad11);
 dirp = opendir(cad11);
  if (dirp == NULL){
  mkdir(cad11,0776);
- }}
+ }
+ }
 else{dig++;}
 }
 sec++;
 i++;
 }
-
+ path=ter1;
+ printf("\n entro a path: %s",path);
+ fue_mkdisk(otro,size,unit,path,nom);
 }
 else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
 char* sec2 = strtok(ter,"\"");
@@ -228,7 +235,9 @@ strncpy(ter2,sec2,20);
 sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
 if(strcmp(ter1,"dsk")==0){
-nom = ter2;}else{
+nom = ter2;
+ printf("\n entro a name: %s",nom);
+fue_mkdisk(otro,size,unit,path,nom);}else{
 printf("extension incorrecta");}
 }
 }
