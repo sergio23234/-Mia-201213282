@@ -1,7 +1,8 @@
 # depslib dependency file v1.0
-1470551176 source:/home/sergio/Mytest/P1_201213282/main.c
+1470600973 source:/home/sergio/Mytest/P1_201213282/main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
 	<dirent.h>
+	<time.h>
 

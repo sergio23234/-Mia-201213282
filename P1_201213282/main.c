@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <time.h>
 struct MBR_particion{
 char status;
 char type;
@@ -33,11 +34,17 @@ if(unit==0&&size<10000||unit==1&&size<10){
 printf("tamaño minimo de disco es de 10 MB");
 menu();}
 else{
-strcat(path,nom);
+time_t curtime;
+struct tm *loctime;
+curtime = time (NULL);
+loctime = localtime (&curtime);
 FILE* archivo;
+strcat(path,nom);
 archivo=fopen(path,"a+b");
+struct Master_Boot_Record master;
+master.anio = loctime->tm_year+1900;
 if(unit==1){
-printf("%i",size);
+printf("%i",master.anio);
 char a[1000] ="";
 for(int j=0;j<1000;j++){int i=0;
 while(i<size){
@@ -45,6 +52,16 @@ fwrite (a,1 ,sizeof(a),archivo);
 i++;}}
 fclose(archivo);
 }
+else{
+int tama = size*1000;
+master.tamaio_mbr = tama;
+printf("%i",size);
+char a[1000] ="";
+for(int j=0;j<size;j++){
+fwrite (a,1 ,sizeof(a),archivo);}
+fclose(archivo);
+}
+printf("funciono");
 }
 }
 void fue_umount(char cad[], char id[]){
@@ -193,7 +210,7 @@ printf("comando incorrecto");}
 }
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
 if(strcmp(cad,"")==0){
-if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0){printf("funciona"); accion_mkdisk(size,path,nom,unit);}
+if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0){accion_mkdisk(size,path,nom,unit);}
 else{printf("\nerror faltan parametros\n");
     menu();}
 }
