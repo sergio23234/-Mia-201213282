@@ -43,8 +43,14 @@ strcat(path,nom);
 archivo=fopen(path,"a+b");
 struct Master_Boot_Record master;
 master.anio = loctime->tm_year+1900;
+master.mes = loctime->tm_mon;
+master.dia = loctime->tm_mday;
+master.hora = loctime->tm_hour;
+master.min = loctime->tm_min;
 if(unit==1){
-printf("%i",master.anio);
+int tam = size*1000000;
+master.tamaio_mbr = tam;
+printf("%i  tam:%i",master.min,master.tamaio_mbr);
 char a[1000] ="";
 for(int j=0;j<1000;j++){int i=0;
 while(i<size){
@@ -55,12 +61,16 @@ fclose(archivo);
 else{
 int tama = size*1000;
 master.tamaio_mbr = tama;
-printf("%i",size);
+printf("%i  tam:%i",master.min,master.tamaio_mbr);
 char a[1000] ="";
 for(int j=0;j<size;j++){
 fwrite (a,1 ,sizeof(a),archivo);}
 fclose(archivo);
 }
+archivo= fopen(path,"r+b");
+fseek(archivo,0,SEEK_SET);
+fwrite(&master,sizeof(Master_Boot_Record),sizeof(master),archivo);
+fclose(archivo);
 printf("funciono");
 }
 }
