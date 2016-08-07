@@ -169,7 +169,7 @@ printf("comando incorrecto");}
 }
 }
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
-if(cad[0]=='\n'){
+if(strcmp(cad,"")==0){
 if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0){printf("funciona");}
 else{printf("error faltan parametros");}
 }
@@ -178,9 +178,10 @@ char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que en
 prin = strtok(cad," ");
 otro = strtok(NULL,"\0");
 printf("\n veamos:%s",otro);
-if(*otro==' '){
-printf("si");
-}
+if ((otro!= NULL) && (otro[0] != '\0')) {
+   printf("c is not empty\n");
+}else{otro="";}
+printf("\n veamos:%s",otro);
 char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
 int ver = 0;
 int comprobante = 0;
