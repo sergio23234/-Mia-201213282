@@ -169,11 +169,18 @@ printf("comando incorrecto");}
 }
 }
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
-if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0&&strcmp(cad,NULL)==0){printf("funciona");}
+if(cad[0]=='\n'){
+if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0){printf("funciona");}
+else{printf("error faltan parametros");}
+}
+else{
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
-otro = strtok(NULL,"\n");
-printf("\nveamos: %s",otro);
+otro = strtok(NULL,"\0");
+printf("\n veamos:%s",otro);
+if(*otro==' '){
+printf("si");
+}
 char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
 int ver = 0;
 int comprobante = 0;
@@ -243,6 +250,7 @@ printf("extension incorrecta");}
 }
 else{
 printf("Error comando mal ingresado");}
+}
 }
 void analizar_cadena(char cadena[]){
  char* pch;
