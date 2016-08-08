@@ -29,6 +29,35 @@ int tama;
 int sig;
 char nom[16];
 }Extended_Boot_Record;
+void imprimir_rashos(char path[]){
+struct Master_Boot_Record uno;
+FILE* archivo;
+archivo=fopen(path,"rb");
+if(archivo){
+fseek(archivo,0,SEEK_SET);
+fread(&uno,sizeof(struct Master_Boot_Record),sizeof(uno),archivo);
+printf("datos: fecha:%i/%i/%i hora: %i:%i tam: %i",uno.dia,uno.mes,uno.anio,uno.hora,uno.min,uno.tamaio_mbr);
+}
+}
+void accion_rmdisk(char path[]){
+strcat(path,".dsk");
+FILE* archivo;
+archivo=fopen(path,"rb");
+if(archivo){
+fclose(archivo);
+int a = remove(path);
+if(a==0){
+printf("\neliminado exitosamente\n");
+menu();
+}else{
+printf("\n no eliminado\n");
+menu();
+}
+}else{
+printf("\nel archivo no existe\n");
+menu();
+}
+}
 void accion_mkdisk(int size,char path[],char nom[],int unit){
 if(unit==0&&size<10000||unit==1&&size<10){
 printf("tamaño minimo de disco es de 10 MB");
@@ -38,8 +67,8 @@ time_t curtime;
 struct tm *loctime;
 curtime = time (NULL);
 loctime = localtime (&curtime);
-FILE* archivo;
 strcat(path,nom);
+FILE* archivo;
 archivo=fopen(path,"a+b");
 struct Master_Boot_Record master;
 master.anio = loctime->tm_year+1900;
@@ -71,7 +100,8 @@ archivo= fopen(path,"r+b");
 fseek(archivo,0,SEEK_SET);
 fwrite(&master,sizeof(Master_Boot_Record),sizeof(master),archivo);
 fclose(archivo);
-printf("funciono");
+imprimir_rashos(path);
+menu();
 }
 }
 void fue_umount(char cad[], char id[]){
@@ -180,9 +210,6 @@ else{
 printf("Error comando mal ingresado");}
 }
 void fue_rmdisk(char cad[],char path[], int eliminado){
-
-
- printf("Resultado: %s\n",cad);
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
 otro = strtok(NULL,"\n");
@@ -201,7 +228,6 @@ if(comprobante==1){ char *sec1;
 sec = strtok(prin,"::");
 sec1= strtok(NULL," ");
 ter = strtok(sec1,":");
-printf("\nveamos: %s",ter);
 if(strcmp(sec,"-path")==0){
 char* sec2 = strtok(ter,"\"");
 char *ter1 = strtok(NULL,"\"");
@@ -211,7 +237,7 @@ sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
 if(strcmp(ter1,"dsk")==0){
 printf("\neliminara: %s",ter2);
-/* metodo para eliminar el archivo*/
+accion_rmdisk(ter2);
 }else{
 printf("extension incorrecta");}
 }else{
