@@ -30,21 +30,38 @@ int sig;
 char nom[16];
 }Extended_Boot_Record;
 void imprimir_rashos(char path[]){
-printf("%s",path);
+printf("%s\n ",path);
 struct Master_Boot_Record uno;
 FILE* archivo;
-archivo=fopen(path,"rb");
+archivo=fopen(path,"r+b");
 if(archivo){
-fseek(archivo,0,SEEK_SET);
+void rewind(archivo);
+fseek(archivo,sizeof(struct Master_Boot_Record),SEEK_SET);
 fread(&uno,sizeof(struct Master_Boot_Record),1,archivo);
-printf("datos: fecha:%i/%i/%i \n hora: %i:%i \n tam: %i",uno.dia,uno.mes,uno.anio,uno.hora,uno.min,uno.tamaio_mbr);
-//printf("tam struc :%i\n otro tam: %i",sizeof(struct Master_Boot_Record),sizeof(uno));
 fclose(archivo);
+printf("datos: fecha:%i/%i/%i \n hora: %i:%i \n tam: %i",uno.dia,uno.mes,uno.anio,uno.hora,uno.min,uno.tamaio_mbr);
 }
 }
-void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){printf("normal\n");menu();}
-void accion_fdisk_add(int add,char path[],int unit,char name[]){printf("Añadir\n");menu();}
-void accion_fdisk_del(int Delete,char path[],char name[]){printf("ELiminar\n");menu();}
+void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){printf("normal\n");
+FILE* archivo;
+archivo=fopen(path,"r+b");
+struct Master_Boot_Record prueba;
+prueba.anio = 2000;
+prueba.dia = 12;
+prueba.mes = 2;
+prueba.hora = 10;
+prueba.min = 12;
+prueba.tamaio_mbr = 1;
+prueba.mbr_disk_signature = 12;
+archivo= fopen(path,"r+b");
+fseek(archivo,sizeof(struct Master_Boot_Record),SEEK_SET);
+fwrite(&prueba,2,sizeof(prueba),archivo);
+fclose(archivo);
+imprimir_rashos(path);
+
+}
+void accion_fdisk_add(int add,char path[],int unit,char name[]){printf("Añadir\n");}
+void accion_fdisk_del(int Delete,char path[],char name[]){printf("ELiminar\n");}
 void accion_rmdisk(char path[]){
 strcat(path,".dsk");
 FILE* archivo;
@@ -54,20 +71,16 @@ fclose(archivo);
 int a = remove(path);
 if(a==0){
 printf("\neliminado exitosamente\n");
-menu();
 }else{
 printf("\n no eliminado\n");
-menu();
 }
 }else{
 printf("\nel archivo no existe\n");
-menu();
 }
 }
 void accion_mkdisk(int size,char path[],char nom[],int unit){
 if(unit==0&&size<10000||unit==1&&size<10){
-printf("tamaño minimo de disco es de 10 MB");
-menu();}
+printf("tamaño minimo de disco es de 10 MB");}
 else{
 time_t curtime;
 struct tm *loctime;
@@ -91,7 +104,6 @@ for(int j=0;j<1000;j++){int i=0;
 while(i<size){
 fwrite (a,1,sizeof(a),archivo);
 i++;}}
-fclose(archivo);
 }
 else{
 int tama = size*1000;
@@ -100,14 +112,13 @@ printf("%i  tam:%i",master.min,master.tamaio_mbr);
 char a[1000] ="";
 for(int j=0;j<size;j++){
 fwrite (a,1,sizeof(a),archivo);}
-fclose(archivo);
 }
+fclose(archivo);
 printf("%s",path);
 archivo= fopen(path,"r+b");
 fseek(archivo,0,SEEK_SET);
 fwrite(&master,2,sizeof(master),archivo);
 fclose(archivo);
-menu();
 }
 }
 void fue_umount(char cad[], char id[]){
@@ -149,25 +160,28 @@ printf("extension incorrecta");}
 }
 }
 void fue_fdisk(char cad[], int size, int unit, char path[], int type, int fit, int Delete,char name[], int add){
-if(strcmp(cad,"")==0){
+if(cad==NULL){
 if(size!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){
 if(add !=0||Delete!=0){
 printf("error comandos extra");
-}else{ accion_fdisk_normal(size,unit,path,type,fit,name);}}
+}else{
+printf("llega");accion_fdisk_normal(size,unit,path,type,fit,name);}}
 else if(add!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){if(size!=0||Delete!=0){
 printf("error comandos extra");
 }else{ accion_fdisk_add(add,path,unit,name);}}
 else if(Delete!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){if(size!=0||Delete!=0){
 printf("error comandos extra");
 }else{ accion_fdisk_del(Delete,path,name);}}
-else{printf("\nerror faltan parametros\n");
-    menu();}
+else{
+printf("\nerror faltan parametros\n");}
 }
+else{
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
 otro = strtok(NULL,"\n");
-if((otro!= NULL) && (otro[0] != '\0')) {}
-else{otro="";}
+if((otro!= NULL) && (otro[0]!='\0')) {}
+else{printf("ya es nula");
+free(otro); char* otro ="";}
 char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
 int ver = 0;
 int comprobante = 0;
@@ -194,28 +208,30 @@ if(strcmp(ter,"m")==0){
 unit = 1;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);
 } else if(strcmp(ter,"b")==0){unit =2; fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}
 else if(strcmp(ter,"k")==0){unit =0; fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}
-else{printf("unidad incorrecta"); menu();}
+else{printf("unidad incorrecta");}
 }
 else if(strcmp(sec,"+type")==0){//tipo
 if(strcmp(ter,"e")==0){
 type = 1;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add); } else if(strcmp(ter,"l")==0){type=2;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}
-else if(strcmp(ter,"p")==0){type=0;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}else{printf("type incorrecto"); menu();}}
+else if(strcmp(ter,"p")==0){type=0;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}else{printf("type incorrecto"); }}
 else if(strcmp(sec,"+fit")==0){//criterios para asignar espacio
 if(strcmp(ter,"ff")==0){
 fit = 1; fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);} else if(strcmp(ter,"bf")==0){fit =2;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}
-else if(strcmp(ter,"bf")==0){fit =2;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}else{printf("ajuste incorrecto"); menu();}}
+else if(strcmp(ter,"bf")==0){fit =2;fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}else{printf("ajuste incorrecto");}}
 else if(strcmp(sec,"-path")==0){//direccion de carpeta
 char* ter1 = strtok(ter,"\"");
 sec1 = strtok(NULL,"\"");
 sec = ter1;
 FILE* archivo;
-archivo=fopen(path,"rb");
+archivo=fopen(sec,"r+b");
 if(archivo){
- path=ter1;
-fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}
+int a = fclose(archivo);
+if(a ==0){path=sec;
+fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}else{printf("no se cerro correctamente");}
+ }
 else{
 printf("error, el archivo no se pudo abrir\n");
-menu();}}
+}}
 else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
 char* sec2 = strtok(ter,"\"");
 char *ter1 = strtok(NULL,"\"");
@@ -237,10 +253,11 @@ fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);
 else if(strcmp(sec,"+delete")==0){//unidad
 if(strcmp(ter,"fast")==0){
 Delete = 1; fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);} else if(strcmp(ter,"full")==0){Delete=2; fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}
-else{printf("Error metodo de eliminar equivocado"); menu();}
+else{printf("Error metodo de eliminar equivocado");}
 }
 else{
 printf("Error comando mal ingresado");}
+}
 }
 }
 void fue_rmdisk(char cad[],char path[], int eliminado){
@@ -281,8 +298,7 @@ printf("comando incorrecto");}
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
 if(strcmp(cad,"")==0){
 if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0){accion_mkdisk(size,path,nom,unit);}
-else{printf("\nerror faltan parametros\n");
-    menu();}
+else{printf("\nerror faltan parametros\n");}
 }
 else{
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
@@ -351,14 +367,12 @@ ter1= strtok(NULL," ");
 if(strcmp(ter1,"dsk")==0){
 nom = ter2;
 fue_mkdisk(otro,size,unit,path,nom);}else{
-printf("extension incorrecta");
- menu();}
+printf("extension incorrecta");}
 fue_mkdisk(otro,size,unit,path,nom);
 }
 }
 else{
-printf("Error comando mal ingresado");
- menu();}
+printf("Error comando mal ingresado");}
 }
 }
 void analizar_cadena(char cadena[]){
@@ -378,8 +392,7 @@ void analizar_cadena(char cadena[]){
    printf("\n entro");
    pch = strtok (NULL,"\n");
    cadena = pch;
-   /*fue_fdisk(cadena,0,0,"",0,0,0,"",0);*/
-   prue();
+   fue_fdisk(cadena,0,0,"",0,0,0,"",0);
    }
    else if(strcmp(pch,"mount")==0){
    printf("mount cuantro");}
@@ -391,7 +404,8 @@ void analizar_cadena(char cadena[]){
         printf("error");
    }
 }
-void menu(){
+int menu(){
+int num=1;
 printf("introduzca comando \n");
     char cadena[1000]="";
     int i = 0;
@@ -419,13 +433,17 @@ printf("introduzca comando \n");
     analizar_cadena(cadena);
     }else{
    printf("Error");
+   num = 0;
     }
-}
+return num;}
 void prue(){
 imprimir_rashos("/home/sergio/hola/si.dsk");
 }
 int main()
 {
-    menu();
+int num =1;
+do{
+    num=menu();}
+    while(num!=0);
     return 0;
 }
