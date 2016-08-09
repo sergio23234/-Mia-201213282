@@ -46,19 +46,63 @@ void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char nam
 FILE* archivo;
 archivo=fopen(path,"r+b");
 struct Master_Boot_Record prueba;
-prueba.anio = 2000;
-prueba.dia = 12;
-prueba.mes = 2;
-prueba.hora = 10;
-prueba.min = 12;
-prueba.tamaio_mbr = 1;
-prueba.mbr_disk_signature = 12;
+struct MBR_particion nuevo;
+if((size<2000&&unit==0)||(size<2&&unit==1)||(size<2000000&&unit==2)){
+printf("error tamaño minimo para una particion es de 2MB");
+}else{
+if(fit==0){nuevo.fit='W';}else if(fit==1){nuevo.fit='F';}else{nuevo.fit='B';}
+if(unit==0){nuevo.size = size*10000;}else if(unit==1){nuevo.size = size*1000000;}else{nuevo.size = size;}
 archivo= fopen(path,"r+b");
-fseek(archivo,sizeof(struct Master_Boot_Record),SEEK_SET);
-fwrite(&prueba,2,sizeof(prueba),archivo);
+int hay_error = 0;
+if(archivo){
+fseek(archivo,0,SEEK_SET);
+fread(&prueba,sizeof(struct Master_Boot_Record),1,archivo);
+int Bool_extend = 0 ;
+struct MBR_particion auxiliar = prueba.particion1;
+int ini[4]={0,0,0,0};
+int tams[4]={0,0,0,0};
+if(auxiliar.status=='A'){
+ini[0] = auxiliar.part_ini;
+tams[0] = auxiliar.size;
+if(auxiliar.type=='E'){
+Bool_extend = 1;}}
+auxiliar = prueba.particion2;
+if(auxiliar.status=='A'){
+ini[1] = auxiliar.part_ini;
+tams[1] = auxiliar.size;
+if(auxiliar.type=='E'){
+Bool_extend = 1;}}
+auxiliar = prueba.particion3;
+if(auxiliar.status=='A'){
+ini[2] = auxiliar.part_ini;
+tams[2] = auxiliar.size;
+if(auxiliar.type=='E'){
+Bool_extend = 1;}}
+auxiliar = prueba.particion4;
+if(auxiliar.status=='A'){
+ini[3] = auxiliar.part_ini;
+tams[3] = auxiliar.size;
+if(auxiliar.type=='E'){
+Bool_extend = 1;}}
+if(strlen(name)<=16){
+strcpy(nuevo.name,name);}else{
+hay_error = 3;
+}
+if(type==0){
+nuevo.type ='P';
+}else if(type==1){
+if(Bool_extend==0){
+nuevo.type ='E';}//error = 1 ya hay extendida;
+else{ hay_error=1;}
+}else{
+if(Bool_extend!=0){
+nuevo.type ='L';}//error = 2 no hay extendida y se crea una logica;
+else{ hay_error=2;}
+}
 fclose(archivo);
-imprimir_rashos(path);
-
+if(hay_error==0){
+printf("\nfunciono %s\n",nuevo.name);
+}}}
 }
 void accion_fdisk_add(int add,char path[],int unit,char name[]){printf("Añadir\n");}
 void accion_fdisk_del(int Delete,char path[],char name[]){printf("ELiminar\n");}
@@ -95,6 +139,12 @@ master.mes = loctime->tm_mon+1;
 master.dia = loctime->tm_mday;
 master.hora = loctime->tm_hour;
 master.min = loctime->tm_min;
+struct MBR_particion auxiliar;
+auxiliar.status ='I';
+master.particion1 = auxiliar;
+master.particion2 = auxiliar;
+master.particion3 = auxiliar;
+master.particion4 = auxiliar;
 if(unit==1){
 int tam = size*1000000;
 master.tamaio_mbr = tam;
@@ -180,8 +230,7 @@ char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que en
 prin = strtok(cad," ");
 otro = strtok(NULL,"\n");
 if((otro!= NULL) && (otro[0]!='\0')) {}
-else{printf("ya es nula");
-free(otro); char* otro ="";}
+else{free(otro); char* otro ="";}
 char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
 int ver = 0;
 int comprobante = 0;
