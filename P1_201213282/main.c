@@ -30,15 +30,24 @@ void imprimir_rashos(char path[]){
 printf("%s\n ",path);
 struct Master_Boot_Record uno;
 FILE* archivo;
-archivo=fopen(path,"r+b");
+archivo=fopen(path,"rb");
 if(archivo){
-void rewind(archivo);
-fseek(archivo,sizeof(struct Master_Boot_Record),SEEK_SET);
-fread(&uno,sizeof(struct Master_Boot_Record),1,archivo);
-fclose(archivo);
-printf("datos: fecha:%i/%i/%i \n hora: %i:%i \n tam: %i",uno.dia,uno.mes,uno.anio,uno.hora,uno.min,uno.tamaio_mbr);
+fseek(archivo,0,SEEK_SET);
+fread(&uno,1,sizeof(struct Master_Boot_Record),archivo);
+}fclose(archivo);
+struct MBR_particion auxiliar;
+for(int i = 0; i<4;i++){
+auxiliar = uno.particion[i];
+char a = 'A';
+if(auxiliar.status=='A'){
+printf("datos:\n nombre:%s\n bit_ini:%i tam:%i tipo:%c\n ",auxiliar.name,auxiliar.part_ini,auxiliar.size,auxiliar.type);
+}
+else{
+printf("Inactiva:%c\n",auxiliar.status);
 }
 }
+}
+
 void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
 FILE* archivo;
 archivo=fopen(path,"r+b");
@@ -46,15 +55,15 @@ struct Master_Boot_Record prueba;
 struct MBR_particion nuevo;
 if((size<2000&&unit==0)||(size<2&&unit==1)||(size<2000000&&unit==2)){
 printf("error tamaño minimo para una particion es de 2MB");
-}else{
-archivo= fopen(path,"r+b");
+}
+else{
 int hay_error = 0;
 if(archivo){
 fseek(archivo,0,SEEK_SET);
-fread(&prueba,sizeof(struct Master_Boot_Record),1,archivo);
-fclose(archivo);}
+fread(&prueba,1,sizeof(struct Master_Boot_Record),archivo);
+}fclose(archivo);
 if(fit==0){nuevo.fit='W';}else if(fit==1){nuevo.fit='F';}else{nuevo.fit='B';}
-if(unit==0){nuevo.size = size*10000;}else if(unit==1){nuevo.size = size*1000000;}else{nuevo.size = size;}
+if(unit==0){nuevo.size = size*1000;}else if(unit==1){nuevo.size = size*1000000;}else{nuevo.size = size;}
 int Bool_extend = 0 ;
 struct MBR_particion auxiliar;
 int ocupadas =0;
@@ -82,13 +91,11 @@ else{ hay_error=2;}
 if(ocupadas==0){
 if(prueba.tamaio_mbr>=nuevo.size){
 nuevo.part_ini = sizeof(struct Master_Boot_Record);
-nuevo.size = size;
 }else{hay_error=4;/*no hay suficiente espacio en el disco */}
 }else if (ocupadas ==4){
 hay_error = 5; /*NO hay mas particiones disponibles*/
 }
 else{
-nuevo.status ='A';
 int error_espacio = 1; //no hay espacio
 for(int i=0;i<ocupadas;i++){
 auxiliar = prueba.particion[i];
@@ -111,11 +118,19 @@ int tam_part = auxiliar.part_ini+auxiliar.size;
 int libre = prueba.tamaio_mbr-tam_part;
 if(libre>=nuevo.size){
 nuevo.part_ini = auxiliar.part_ini+auxiliar.size;
+nuevo.status ='A';
+prueba.particion[ocupadas] = nuevo;
 }
 else{
 hay_error = 4; /*no hay suficiente espacio en el disco */
 }}}
 if(hay_error==0){
+if(ocupadas==0){
+printf("---entro\n");
+nuevo.status ='A';
+prueba.particion[0]=nuevo;
+}
+else{printf("---entro1\n");
 for(int i =0;i<ocupadas+1;i++){
 auxiliar = prueba.particion[i];
 struct MBR_particion aux;
@@ -123,6 +138,20 @@ if(nuevo.part_ini<auxiliar.part_ini){
 aux = prueba.particion[i];
 prueba.particion[i]=nuevo;
 nuevo = prueba.particion[i];}}
+}
+nuevo.status ='A';
+archivo= fopen(path,"r+b");
+void rewind (archivo);
+fseek(archivo,0,SEEK_SET);
+fwrite(&prueba,1,sizeof(struct Master_Boot_Record),archivo);
+fclose(archivo);
+printf("\nExito\n");
+struct MBR_particion auxili;
+for(int i = 0; i<4;i++){
+auxili = prueba.particion[i];
+if(auxili.status=='A'){
+printf("datos:\n nombre:%s\n bit_ini:%i\n tam:%i\n tipo:%c\n ",auxili.name,auxili.part_ini,auxili.size,auxili.status);}
+else{printf("Inactiva:%c\n",auxili.status);}}
 }
 else{
 switch(hay_error){
@@ -133,8 +162,6 @@ case 4: printf("No hay espacio suficiente en el disco"); break;
 default: printf("Ya hay 4 particiones en el disco");
 }
 }
-printf("\nfunciono %s\n",nuevo.name);
-
 }}
 void accion_fdisk_add(int add,char path[],int unit,char name[]){printf("Añadir\n");}
 void accion_fdisk_del(int Delete,char path[],char name[]){printf("ELiminar\n");}
@@ -194,15 +221,14 @@ for(int j=0;j<size;j++){
 fwrite (a,1,sizeof(a),archivo);}
 }
 fclose(archivo);
-printf("%s",path);
 archivo= fopen(path,"r+b");
 fseek(archivo,0,SEEK_SET);
-fwrite(&master,2,sizeof(master),archivo);
+fwrite(&master,sizeof(master),1,archivo);
 fclose(archivo);
 }
 }
-void fue_umount(char cad[], char id[]){
-
+void fue_umount(char cad[] /*, char id[] */){
+imprimir_rashos("/home/sergio/hola/si.dsk");
 }
 void fue_mount(char cad[],char path[],char name[]){
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
@@ -375,7 +401,7 @@ printf("comando incorrecto");}
 }
 }
 void fue_mkdisk(char cad[], int size/*tamaño*/,int unit /*unidad*/,char path[]/*direccion*/,char nom[]/*nombre*/){
-if(strcmp(cad,"")==0){
+if(cad==NULL){
 if(size!=0&&strcmp(path,"")!=0&&strcmp(nom,"")!=0){accion_mkdisk(size,path,nom,unit);}
 else{printf("\nerror faltan parametros\n");}
 }
@@ -384,8 +410,7 @@ char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que en
 prin = strtok(cad," ");
 otro = strtok(NULL,"\0");
 if ((otro!= NULL) && (otro[0] != '\0')) {
-
-}else{otro="";}
+}else{free(otro); char* otro ="";}
 char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
 int ver = 0;
 int comprobante = 0;
@@ -478,7 +503,7 @@ void analizar_cadena(char cadena[]){
    else if(strcmp(pch,"umount")==0){
    pch = strtok (NULL,"\n");
    cadena = pch;
-   fue_umount(cadena,"");}
+   fue_umount(cadena);}
    else{
         printf("error");
    }
