@@ -16,10 +16,7 @@ int tamaio_mbr;
 int dia; int mes; int anio;
 int hora; int min;
 int mbr_disk_signature;
-struct MBR_particion particion1;
-struct MBR_particion particion2;
-struct MBR_particion particion3;
-struct MBR_particion particion4;
+struct MBR_particion particion[4];
 }Master_Boot_Record;
 struct Extended_Boot_Record{
 char status;
@@ -42,7 +39,7 @@ fclose(archivo);
 printf("datos: fecha:%i/%i/%i \n hora: %i:%i \n tam: %i",uno.dia,uno.mes,uno.anio,uno.hora,uno.min,uno.tamaio_mbr);
 }
 }
-void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){printf("normal\n");
+void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
 FILE* archivo;
 archivo=fopen(path,"r+b");
 struct Master_Boot_Record prueba;
@@ -50,43 +47,26 @@ struct MBR_particion nuevo;
 if((size<2000&&unit==0)||(size<2&&unit==1)||(size<2000000&&unit==2)){
 printf("error tamaño minimo para una particion es de 2MB");
 }else{
-if(fit==0){nuevo.fit='W';}else if(fit==1){nuevo.fit='F';}else{nuevo.fit='B';}
-if(unit==0){nuevo.size = size*10000;}else if(unit==1){nuevo.size = size*1000000;}else{nuevo.size = size;}
 archivo= fopen(path,"r+b");
 int hay_error = 0;
 if(archivo){
 fseek(archivo,0,SEEK_SET);
 fread(&prueba,sizeof(struct Master_Boot_Record),1,archivo);
+fclose(archivo);}
+if(fit==0){nuevo.fit='W';}else if(fit==1){nuevo.fit='F';}else{nuevo.fit='B';}
+if(unit==0){nuevo.size = size*10000;}else if(unit==1){nuevo.size = size*1000000;}else{nuevo.size = size;}
 int Bool_extend = 0 ;
-struct MBR_particion auxiliar = prueba.particion1;
-int ini[4]={0,0,0,0};
-int tams[4]={0,0,0,0};
+struct MBR_particion auxiliar;
+int ocupadas =0;
+for(int i =0; i<4;i++){
+auxiliar = prueba.particion[i];
 if(auxiliar.status=='A'){
-ini[0] = auxiliar.part_ini;
-tams[0] = auxiliar.size;
+ocupadas++;
 if(auxiliar.type=='E'){
-Bool_extend = 1;}}
-auxiliar = prueba.particion2;
-if(auxiliar.status=='A'){
-ini[1] = auxiliar.part_ini;
-tams[1] = auxiliar.size;
-if(auxiliar.type=='E'){
-Bool_extend = 1;}}
-auxiliar = prueba.particion3;
-if(auxiliar.status=='A'){
-ini[2] = auxiliar.part_ini;
-tams[2] = auxiliar.size;
-if(auxiliar.type=='E'){
-Bool_extend = 1;}}
-auxiliar = prueba.particion4;
-if(auxiliar.status=='A'){
-ini[3] = auxiliar.part_ini;
-tams[3] = auxiliar.size;
-if(auxiliar.type=='E'){
-Bool_extend = 1;}}
+Bool_extend = 1;}}}
 if(strlen(name)<=16){
 strcpy(nuevo.name,name);}else{
-hay_error = 3;
+hay_error = 3;// nombre mayora a 16 caracteres
 }
 if(type==0){
 nuevo.type ='P';
@@ -99,11 +79,63 @@ if(Bool_extend!=0){
 nuevo.type ='L';}//error = 2 no hay extendida y se crea una logica;
 else{ hay_error=2;}
 }
-fclose(archivo);
-if(hay_error==0){
-printf("\nfunciono %s\n",nuevo.name);
-}}}
+if(ocupadas==0){
+if(prueba.tamaio_mbr>=nuevo.size){
+nuevo.part_ini = sizeof(struct Master_Boot_Record);
+nuevo.size = size;
+}else{hay_error=4;/*no hay suficiente espacio en el disco */}
+}else if (ocupadas ==4){
+hay_error = 5; /*NO hay mas particiones disponibles*/
 }
+else{
+nuevo.status ='A';
+int error_espacio = 1; //no hay espacio
+for(int i=0;i<ocupadas;i++){
+auxiliar = prueba.particion[i];
+if(i==0){
+int libre = auxiliar.part_ini-sizeof(prueba);
+if(libre>nuevo.size){ error_espacio = 0;
+nuevo.part_ini = auxiliar.part_ini+auxiliar.size;
+}}
+else{
+struct MBR_particion auxiliar2 = prueba.particion[i+1];
+int tam_par = auxiliar.part_ini+auxiliar.size; //tamaño de la particion 1.
+int libre = auxiliar2.part_ini-tam_par;
+if(libre>nuevo.size){
+error_espacio = 0;
+nuevo.part_ini = auxiliar.part_ini+auxiliar.size;}}
+}
+if(error_espacio==1){
+auxiliar = prueba.particion[ocupadas-1];
+int tam_part = auxiliar.part_ini+auxiliar.size;
+int libre = prueba.tamaio_mbr-tam_part;
+if(libre>=nuevo.size){
+nuevo.part_ini = auxiliar.part_ini+auxiliar.size;
+}
+else{
+hay_error = 4; /*no hay suficiente espacio en el disco */
+}}}
+if(hay_error==0){
+for(int i =0;i<ocupadas+1;i++){
+auxiliar = prueba.particion[i];
+struct MBR_particion aux;
+if(nuevo.part_ini<auxiliar.part_ini){
+aux = prueba.particion[i];
+prueba.particion[i]=nuevo;
+nuevo = prueba.particion[i];}}
+}
+else{
+switch(hay_error){
+case 1: printf("Ya hay particion extendida"); break;
+case 2: printf("NO hay particion extendida para crear la logica"); break;
+case 3: printf("Nombre mayor a 16 caracteres"); break;
+case 4: printf("No hay espacio suficiente en el disco"); break;
+default: printf("Ya hay 4 particiones en el disco");
+}
+}
+printf("\nfunciono %s\n",nuevo.name);
+
+}}
 void accion_fdisk_add(int add,char path[],int unit,char name[]){printf("Añadir\n");}
 void accion_fdisk_del(int Delete,char path[],char name[]){printf("ELiminar\n");}
 void accion_rmdisk(char path[]){
@@ -141,10 +173,8 @@ master.hora = loctime->tm_hour;
 master.min = loctime->tm_min;
 struct MBR_particion auxiliar;
 auxiliar.status ='I';
-master.particion1 = auxiliar;
-master.particion2 = auxiliar;
-master.particion3 = auxiliar;
-master.particion4 = auxiliar;
+for(int i =0;i<4;i++){
+master.particion[i] = auxiliar;}
 if(unit==1){
 int tam = size*1000000;
 master.tamaio_mbr = tam;
