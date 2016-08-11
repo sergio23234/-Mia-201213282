@@ -145,14 +145,7 @@ void rewind (archivo);
 fseek(archivo,0,SEEK_SET);
 fwrite(&prueba,1,sizeof(struct Master_Boot_Record),archivo);
 fclose(archivo);
-printf("\nExito\n");
-struct MBR_particion auxili;
-for(int i = 0; i<4;i++){
-auxili = prueba.particion[i];
-if(auxili.status=='A'){
-printf("datos:\n nombre:%s\n bit_ini:%i\n tam:%i\n tipo:%c\n ",auxili.name,auxili.part_ini,auxili.size,auxili.status);}
-else{printf("Inactiva:%c\n",auxili.status);}}
-}
+printf("\nparticion creada exitosamente\n");}
 else{
 switch(hay_error){
 case 1: printf("Ya hay particion extendida"); break;
@@ -160,11 +153,39 @@ case 2: printf("NO hay particion extendida para crear la logica"); break;
 case 3: printf("Nombre mayor a 16 caracteres"); break;
 case 4: printf("No hay espacio suficiente en el disco"); break;
 default: printf("Ya hay 4 particiones en el disco");
+}}}
 }
-}
-}}
 void accion_fdisk_add(int add,char path[],int unit,char name[]){printf("Añadir\n");}
-void accion_fdisk_del(int Delete,char path[],char name[]){printf("ELiminar\n");}
+void accion_fdisk_del(int Delete,char path[],char name[]){
+  struct Master_Boot_Record principal;
+ FILE* archivo;
+archivo=fopen(path,"rb");
+  if(archivo){
+fseek(archivo,0,SEEK_SET);
+fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
+}fclose(archivo);
+struct MBR_particion auxiliar;
+auxiliar.status ='I';
+int part_elim=-1;
+for(int i=0;i<4;i++){
+if(principal.particion[i].status!='I'){
+if(strcmp(principal.particion[i].name,name)==0){
+part_elim = i;
+}}}
+if(part_elim==-1){
+printf("\nparticion no encontrada\n");}
+else{
+for(int i=0;i<3;i++){
+if(i>=part_elim){
+principal.particion[i]=principal.particion[i+1];
+}}
+principal.particion[3]=auxiliar;
+archivo= fopen(path,"r+b");
+fseek(archivo,0,SEEK_SET);
+fwrite(&principal,1,sizeof(struct Master_Boot_Record),archivo);
+fclose(archivo);
+printf("Particion Eliminada\n");}
+}
 void accion_rmdisk(char path[]){
 strcat(path,".dsk");
 FILE* archivo;
@@ -275,7 +296,7 @@ printf("llega");accion_fdisk_normal(size,unit,path,type,fit,name);}}
 else if(add!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){if(size!=0||Delete!=0){
 printf("error comandos extra");
 }else{ accion_fdisk_add(add,path,unit,name);}}
-else if(Delete!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){if(size!=0||Delete!=0){
+else if(Delete!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){if(size!=0||add!=0){
 printf("error comandos extra");
 }else{ accion_fdisk_del(Delete,path,name);}}
 else{
