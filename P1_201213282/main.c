@@ -187,8 +187,8 @@ fclose(archivo);
 printf("Particion Eliminada\n");}
 }
 void accion_rmdisk(char path[]){
-strcat(path,".dsk");
 FILE* archivo;
+printf("\npath:%s\n",path);
 archivo=fopen(path,"rb");
 if(archivo){
 fclose(archivo);
@@ -249,7 +249,7 @@ fclose(archivo);
 }
 }
 void fue_umount(char cad[] /*, char id[] */){
-imprimir_rashos("/home/sergio/hola/si.dsk");
+imprimir_rashos("/home/sergio/hola/ho la.dsk");
 }
 void fue_mount(char cad[],char path[],char name[]){
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
@@ -408,11 +408,20 @@ ter = strtok(sec1,":");
 if(strcmp(sec,"-path")==0){
 char* sec2 = strtok(ter,"\"");
 char *ter1 = strtok(NULL,"\"");
-char ter2[20] ="";
-strncpy(ter2,sec2,20);
+char ter2[60] ="";
+strncpy(ter2,sec2,50);
 sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
 if(strcmp(ter1,"dsk")==0){
+sec = ter2;
+int i =0;
+while(*sec!='\0'){
+if(*sec=='?'){
+ter2[i]=' ';
+}
+sec++;
+i++;
+}
 printf("\neliminara: %s",ter2);
 accion_rmdisk(ter2);
 }else{
@@ -466,7 +475,11 @@ sec1 = strtok(NULL,"\""); //falta comprobar archivos.
 sec = ter1; int dig =0;
 char cad11[100] = ""; int i =0;
 while(*sec!='\0'){
+if(*sec=='?'){
+cad11[i]=' ';
+}else{
 cad11[i]=*sec;
+}
 if(*sec=='/'){
 if(dig=!0){
 dirp = opendir(cad11);
@@ -479,10 +492,11 @@ else{dig++;}
 sec++;
 i++;
 }
- path=ter1;
+ path=cad11;
  fue_mkdisk(otro,size,unit,path,nom);
 }
 else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
+int comp = 0;
 char* sec2 = strtok(ter,"\"");
 char *ter1 = strtok(NULL,"\"");
 char ter2[20] ="";
@@ -490,20 +504,27 @@ strncpy(ter2,sec2,20);
 sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
 if(strcmp(ter1,"dsk")==0){
+sec = ter2;
+int i =0;
+while(*sec!='\0'){
+if(*sec=='?'){
+ter2[i]=' ';
+}
+i++;
+sec++;}
 nom = ter2;
 fue_mkdisk(otro,size,unit,path,nom);}else{
 printf("extension incorrecta");}
-fue_mkdisk(otro,size,unit,path,nom);
 }
 }
 else{
 printf("Error comando mal ingresado");}
 }
 }
-void analizar_cadena(char cadena[]){
- char* pch;
+int analizar_cadena(char cadena[]){
+printf("\ncadena: %s\n",cadena);
+ char* pch; int salir = 1;
    pch = strtok(cadena," ");
-   printf("cad:%s\n",pch);
    if(strcmp(pch,"mkdisk")==0){
    pch = strtok (NULL,"\n");
    cadena = pch;
@@ -525,9 +546,49 @@ void analizar_cadena(char cadena[]){
    pch = strtok (NULL,"\n");
    cadena = pch;
    fue_umount(cadena);}
+   else if(strcmp(pch,"salir")==0){
+   salir =0;
+   }
    else{
         printf("error");
    }
+  return salir;
+}
+int menu1(int con_salto,char cad[]){
+char cadena[500]="";
+    char c; int num=5;
+    int existe_cadena = 0;
+    int presiono_enter=1;
+    int hay_com=0;
+    int i =0;
+    if(con_salto==1){
+    while(presiono_enter!=0){
+    if((c = getchar())!='\n'){
+    if(c !='\\'){
+    if(c=='\"'){
+    hay_com++;
+    if(hay_com>1){
+    hay_com=0;}
+    cadena[i]=c;
+    }else{
+    if(hay_com==1){
+    if(c==' '){
+    cadena[i]='?';
+    }else{cadena[i]=c;}
+    }else{
+    cadena[i]=tolower(c);}}
+      }
+    i++;
+    existe_cadena = 1;}
+    else{presiono_enter=0;}
+    }
+    presiono_enter =0;
+    strcat(cad,cadena);
+    }
+    if(cad!=""&&cad[0]!='\0'){
+    num = analizar_cadena(cad);
+    }
+    return num;
 }
 int menu(){
 int num=1;
@@ -538,28 +599,34 @@ printf("introduzca comando \n");
     int existe_cadena = 0;
     int con_salto = 0;
     int presiono_enter=1;
-    int temp = 0,temp1=0;
+    int hay_com=0;
     while(presiono_enter!=0){
     if((c = getchar())!='\n'){
-    if(c==92){
-      temp = 1; temp1=i;
-      con_salto = 1;}
-    else{ cadena[i]=tolower(c);
-    if(temp==1){cadena[temp1]='\\'; con_salto=0;}
+    if(c !='\\'){
+    if(c=='\"'){
+    hay_com++;
+    if(hay_com>1){
+    hay_com=0;}
+    cadena[i]=c;
+    }else{
+    if(hay_com==1){
+    if(c==' '){
+    cadena[i]='?';
+    }else{cadena[i]=c;}
+    }else{
+    cadena[i]=tolower(c);}}
+      }
+    else{cadena[i]==' ';
+      con_salto=1;
     }
     i++;
     existe_cadena = 1;}
-    else{
-    if(con_salto==0){presiono_enter=0;}
-    else{con_salto=0;}
+    else{presiono_enter=0;}
     }
-    }
-    if(existe_cadena==1){
-    analizar_cadena(cadena);
-    }else{
-   printf("Error");
-   num = 0;
-    }
+    presiono_enter =0;
+    num= menu1(con_salto,cadena);
+    //analizar_cadena(cadena);
+
 return num;}
 void prue(){
 imprimir_rashos("/home/sergio/hola/si.dsk");
