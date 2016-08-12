@@ -57,6 +57,92 @@ printf("Inactiva:%c\n",auxiliar.status);
 }
 }
 }
+void rep_mbr(char path[],char name[],char id[]){
+montados *auxiliar;
+if(Ini_mont!=NULL){
+auxiliar = Ini_mont;
+char *cad =""; int encontrado=0;
+while(auxiliar!=NULL&&encontrado==0){
+if(strcmp(id,auxiliar->id)==0){
+cad=auxiliar->path;
+encontrado=1;
+}
+auxiliar = auxiliar->sig;
+}
+if(encontrado==1){
+struct Master_Boot_Record principal;
+FILE* archivo;
+int error=0;
+archivo=fopen(cad,"rb");
+if(archivo){
+fseek(archivo,0,SEEK_SET);
+fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
+}else{error=1;}
+fclose(archivo);
+if(error==0){
+char *sec,*ter;
+sec= strtok(path,".");
+ter= strtok(NULL," ");
+char cad_fin0[1000]="";
+char cad_fin1[1000]="";
+char cad_fin2[1000]="";
+char cad_fin3[1000]="";
+char cad_fin4[1000]="";
+char final_fin[100000]="";
+sprintf(cad_fin0,"digraph struct{\n node [shape=plaintext]\n matriz [label=<\n <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n");
+strcat(final_fin,cad_fin0);
+sprintf(cad_fin1,"<TR>\n<TH>Nombre</TH>\n<TH>Valor</TH>\n</TR>\n");
+strcat(final_fin,cad_fin1);
+sprintf(cad_fin2,"<TR>\n<TD>mbr_tamaño</TD>\n<TH>%i</TD>\n</TR>\n",principal.tamaio_mbr);
+strcat(final_fin,cad_fin2);
+sprintf(cad_fin3,"<TR>\n<TD>mbr_fecha_creacion</TD>\n<TD>%i/%i/%i %i:%i</TD>\n</TR>\n",principal.dia,principal.mes,principal.anio,principal.hora,principal.min);
+strcat(final_fin,cad_fin3);
+sprintf(cad_fin4,"<TR>\n<TD>mbr_disk_signature</TD>\n<TD>%i</TD>\n</TR>\n",principal.mbr_disk_signature);
+strcat(final_fin,cad_fin4);
+struct MBR_particion aux;
+for(int i=0;i<4;i++){
+aux = principal.particion[i];
+char cad_fin[1000]="";
+int j = i+1;
+if(aux.status=='A'){
+sprintf(cad_fin,"<TR>\n<TD>part_status_%i</TD>\n<TD>%c</TD>\n</TR>\n",j,aux.status);
+strcat(final_fin,cad_fin);
+sprintf(cad_fin,"<TR>\n<TD>part_type_%i</TD>\n<TD>%c</TD>\n</TR>\n",j,aux.type);
+strcat(final_fin,cad_fin);
+sprintf(cad_fin,"<TR>\n<TD>part_fit_%i</TD>\n<TD>%c</TD>\n</TR>\n",j,aux.fit);
+strcat(final_fin,cad_fin);
+sprintf(cad_fin,"<TR>\n<TD>part_size_%i</TD>\n<TD>%i</TD>\n</TR>\n",j,aux.size);
+strcat(final_fin,cad_fin);
+sprintf(cad_fin,"<TR>\n<TD>part_start_%i</TD>\n<TD>%i</TD>\n</TR>\n",j,aux.part_ini);
+strcat(final_fin,cad_fin);
+sprintf(cad_fin,"<TR>\n<TD>part_name_%i</TD>\n<TD>%s</TD>\n</TR>\n",j,aux.name);
+strcat(final_fin,cad_fin);
+}
+}
+char cad_fin5[1000]="";
+sprintf(cad_fin5,"</TABLE>>];label=\"Nombre\"}");
+strcat(final_fin,cad_fin5);
+strcat(sec,".dot");
+FILE* n_arch;
+n_arch=fopen(sec,"w+");
+if(n_arch){
+fseek(n_arch,0,SEEK_SET);
+int longitud=strlen(final_fin);
+fwrite(&final_fin,1,longitud,n_arch);
+}
+fclose(n_arch);
+}
+else{printf("error no se pudo abrir archivo\n");}
+}
+else{
+printf("no se encontro id");
+}
+}
+else{
+printf("NO hay unidades montadas\n");
+
+}
+}
 void solo_mount(){
 if(Ini_mont!=NULL){
 struct montados *aux = Ini_mont;
@@ -70,7 +156,20 @@ printf("No hay particiones montadas\n");
 }
 }
 void accion_mount(char path[],char name[]){
-
+ struct Master_Boot_Record principal;
+ FILE* archivo;
+ int si_lo_encontro=0;
+archivo=fopen(path,"rb");
+  if(archivo){
+fseek(archivo,0,SEEK_SET);
+fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
+}fclose(archivo);
+struct MBR_particion auxiliar;
+for(int i =0; i<4;i++){
+auxiliar = principal.particion[i];
+if(strcmp(auxiliar.name,name)==0){
+si_lo_encontro=1;}}
+if(si_lo_encontro!=0){
 int mayor =0; int encontrado=0; int error_hay=0;
 int fin=1;  char idf[6]="vd";
 char *new_nam=""; char *new_path="";
@@ -84,7 +183,7 @@ do{
 if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)!=0){
     mayor=aux->num; fin++; encontrado=1;}
 else if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)!=0){
-printf("Error particion ya cargada"); error_hay=1;}
+printf("Error particion ya cargada\n"); error_hay=1;}
 else{
 if(mayor<aux->num){
     mayor = aux->num;
@@ -102,12 +201,12 @@ char pe = (char)libre1;
 char ul = (char)libre;
 idf[2]=pe;
 idf[3]=ul;
-printf("el id sera:%s",idf);
 strcpy(nuevo->id,idf);
-//nuevo->id = idf;
 aux->sig = nuevo;
 nuevo->sig = NULL;
-}else{
+printf("particion creada exitosamente\n");
+}
+else{
 nuevo->num=mayor+1;
 int libre= 48+fin;
 int libre1 = 96+mayor+1;
@@ -115,11 +214,10 @@ char pe = (char)libre1;
 char ul = (char)libre;
 idf[2]=pe;
 idf[3]=ul;
-printf("el id sera:%s",idf);
 strcpy(nuevo->id,idf);
-//nuevo->id = idf;
 aux->sig = nuevo;
 nuevo->sig = NULL;
+printf("particion creada exitosamente\n");
 }
 }
 }
@@ -130,11 +228,15 @@ char pe = (char)97;
 char ul = (char)libre;
 idf[2]=pe;
 idf[3]=ul;
-printf("el id sera:%s\n",idf);
 strcpy(nuevo->id,idf);
-//nuevo->id = idf;
 Ini_mont = nuevo;
 nuevo->sig = NULL;
+printf("particion creada exitosamente\n");
+}
+
+}
+else{
+printf("nombre de la particion incorrecto\n");
 }
 }
 void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
@@ -305,12 +407,15 @@ loctime = localtime (&curtime);
 strcat(path,nom);
 FILE* archivo;
 archivo=fopen(path,"a+b");
+srand (time(NULL));
+int aleatorio = rand()%20+1;
 struct Master_Boot_Record master;
 master.anio = loctime->tm_year+1900;
 master.mes = loctime->tm_mon+1;
 master.dia = loctime->tm_mday;
 master.hora = loctime->tm_hour;
 master.min = loctime->tm_min;
+master.mbr_disk_signature=aleatorio;
 struct MBR_particion auxiliar;
 auxiliar.status ='I';
 for(int i =0;i<4;i++){
@@ -340,7 +445,39 @@ printf("Disco creado exitosamente\n");
 }
 }
 void fue_rep(char cad[],char name[],char path[],char id[]){
-/*
+if(cad==NULL){
+if(strcmp(path,"")!=0&&strcmp(name,"")!=0&&strcmp(id,"")!=0){
+printf("total:\n guardar:%s\n reporte:%s\n buscar:%s\n",path,name,id);
+if(strcmp(name,"mbr")==0){
+ rep_mbr(path,name,id);
+}else if(strcmp(name,"disk")==0){
+
+}
+else{
+printf("comando incorrecto por el momento");
+}
+}
+else{printf("\nerror faltan parametros\n");}
+}
+else{
+char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
+prin = strtok(cad," ");
+otro = strtok(NULL,"\0");
+if ((otro!= NULL) && (otro[0] != '\0')) {
+}else{free(otro); char* otro ="";}
+char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
+int ver = 0;
+int comprobante = 0;
+char* aux = prin;
+while(*prin !=32&&comprobante==0){
+if(*prin==58){ver++;}
+if(ver==2){comprobante = 1;}
+prin++;}
+prin = aux;
+if(comprobante==1){ char *sec1;
+sec = strtok(prin,"::");
+sec1= strtok(NULL," ");
+ter = strtok(sec1,":");
 if(strcmp(sec,"-path")==0){//direccion de carpeta
 DIR *dirp;
  struct dirent *direntp;
@@ -366,10 +503,20 @@ else{dig++;}
 sec++;
 i++;
 }
- path=cad11;
-printf("cadena:%s\n",path);
+path=cad11;
+fue_rep(otro,name,path,id);
 }
-*/
+else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
+name = ter;
+fue_rep(otro,name,path,id);
+}
+else if(strcmp(sec,"-id")==0){//verificar id:)
+id= ter;
+fue_rep(otro,name,path,id);
+}
+else{printf("error\n");}
+}
+}
 }
 void fue_umount(char cad[] /*, char id[] */){
 imprimir_rashos(cad);
@@ -767,6 +914,11 @@ int analizar_cadena(char cadena[]){
    pch = strtok (NULL,"\n");
    cadena = pch;
    fue_exec(cadena);
+   }
+   else if(strcmp(pch,"rep")==0){
+   pch = strtok (NULL,"\n");
+   cadena = pch;
+   fue_rep(cadena,"","","");
    }
    else if(*pch=='#'){}
    else{
