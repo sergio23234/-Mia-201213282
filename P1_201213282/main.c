@@ -249,7 +249,7 @@ fclose(archivo);
 }
 }
 void fue_umount(char cad[] /*, char id[] */){
-imprimir_rashos("/home/sergio/hola/ho la.dsk");
+imprimir_rashos(cad);
 }
 void fue_mount(char cad[],char path[],char name[]){
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
@@ -292,7 +292,7 @@ if(size!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){
 if(add !=0||Delete!=0){
 printf("error comandos extra");
 }else{
-printf("llega");accion_fdisk_normal(size,unit,path,type,fit,name);}}
+accion_fdisk_normal(size,unit,path,type,fit,name);}}
 else if(add!=0&&strcmp(path,"")!=0&&strcmp(name,"")!=0){if(size!=0||Delete!=0){
 printf("error comandos extra");
 }else{ accion_fdisk_add(add,path,unit,name);}}
@@ -348,11 +348,19 @@ else if(strcmp(sec,"-path")==0){//direccion de carpeta
 char* ter1 = strtok(ter,"\"");
 sec1 = strtok(NULL,"\"");
 sec = ter1;
+char un[50]=""; int i=0;
+strncpy(un,sec,50);
+while(*sec!='\0'){
+if(*sec=='?'){un[i]=' ';}
+sec++;
+i++;
+}
+printf("\ncadena:%s\n",un);
 FILE* archivo;
-archivo=fopen(sec,"r+b");
+archivo=fopen(un,"r+b");
 if(archivo){
 int a = fclose(archivo);
-if(a ==0){path=sec;
+if(a ==0){path=un;
 fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);}else{printf("no se cerro correctamente");}
  }
 else{
@@ -522,8 +530,22 @@ printf("Error comando mal ingresado");}
 }
 }
 void analisis_2(char cad[]){
-
+int i =0; int commi =0;
+while(cad[i]!='\0'){
+if(cad[i]=='\"'){
+if(commi==1){commi =0;}else{commi =1;}
 }
+if(commi==1){
+if(cad[i]==' '){cad[i]='?';}
+}else{
+char a = cad[i];
+cad[i]=tolower(a);
+}
+i++;
+}
+analizar_cadena(cad);
+}
+
 void fue_exec(char cad[]){
 FILE* archivo;
 archivo=fopen(cad,"r");
@@ -664,9 +686,7 @@ printf("introduzca comando \n");
     //analizar_cadena(cadena);
 
 return num;}
-void prue(){
-imprimir_rashos("/home/sergio/hola/si.dsk");
-}
+
 int main()
 {
 int num =1;
