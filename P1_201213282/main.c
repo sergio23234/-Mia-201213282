@@ -521,6 +521,36 @@ else{
 printf("Error comando mal ingresado");}
 }
 }
+void analisis_2(char cad[]){
+
+}
+void fue_exec(char cad[]){
+FILE* archivo;
+archivo=fopen(cad,"r");
+char c;
+char cadena[300]="";
+int i =0;
+int apertura=0;
+if(archivo){
+while((c=getc(archivo))!=EOF){
+if(c=='\n'){
+if(apertura==0){
+printf("cadena:%s\n",cadena);
+analisis_2(cadena);
+for(int j=i;j>-1;j--){cadena[j]='\0';}
+i=0;}
+else{apertura=0;}
+}
+else if(c=='\\'){
+apertura = 1;
+cadena[i]=' ';
+i++;}
+else{
+cadena[i]=c;
+i++;}
+}}
+fclose(archivo);
+}
 int analizar_cadena(char cadena[]){
 printf("\ncadena: %s\n",cadena);
  char* pch; int salir = 1;
@@ -549,8 +579,14 @@ printf("\ncadena: %s\n",cadena);
    else if(strcmp(pch,"salir")==0){
    salir =0;
    }
+   else if(strcmp(pch,"exec")==0){
+   pch = strtok (NULL,"\n");
+   cadena = pch;
+   fue_exec(cadena);
+   }
+   else if(*pch=='#'){}
    else{
-        printf("error");
+        printf("error\n");
    }
   return salir;
 }
