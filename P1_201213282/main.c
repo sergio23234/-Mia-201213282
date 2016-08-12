@@ -57,6 +57,92 @@ printf("Inactiva:%c\n",auxiliar.status);
 }
 }
 }
+void rep_disk(char path[],char name[],char id[]){
+montados *auxiliar;
+if(Ini_mont!=NULL){
+auxiliar = Ini_mont;
+char *cad =""; int encontrado=0;
+while(auxiliar!=NULL&&encontrado==0){
+if(strcmp(id,auxiliar->id)==0){
+cad=auxiliar->path;
+encontrado=1;
+}
+auxiliar = auxiliar->sig;
+}
+if(encontrado==1){
+struct Master_Boot_Record principal;
+FILE* archivo;
+int error=0;
+archivo=fopen(cad,"rb");
+if(archivo){
+fseek(archivo,0,SEEK_SET);
+fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
+}else{error=1;}
+fclose(archivo);
+if(error==0){
+char *sec,*ter;
+sec= strtok(path,".");
+ter= strtok(NULL," ");
+char ter1[10] ="";
+strcpy(ter1,ter);
+strcat(sec,".dot");
+char cad_final[10000]="";
+char cad_fin0[1000]="";
+sprintf(cad_fin0,"digraph struct{\n rankdir=TB;\n node[style=filled,shape=square];\n subgraph cluster_0{\n label=\"disco\";\n");
+strcat(cad_final,cad_fin0);
+struct MBR_particion aux;
+int mayor =0;
+for(int i=3;i>=0;i--){
+aux=principal.particion[i];
+char parti[500]="";
+if(aux.status=='A'){
+int libre=0;
+if(mayor==0){
+libre = principal.tamaio_mbr -aux.part_ini-aux.size;
+mayor = 1;}
+else{
+libre = principal.particion[i+1].part_ini-aux.part_ini-aux.size;
+}
+if(libre>0){
+sprintf(parti,"L%i[label=\"Libre\" color=deepskyblue];\n",i);
+strcat(cad_final,parti);
+}
+sprintf(parti,"P%i[label=\"%s\\n tipo::%c\\n S.A::%c\\n\" color=darkorchid4];\n",i,aux.name,aux.type,aux.fit);
+strcat(cad_final,parti);
+}}
+int libre = principal.particion[0].part_ini-sizeof(Master_Boot_Record);
+if(libre>0){
+sprintf(cad_fin0,"L0[label=\"Libre\" color=deepskyblue];\n");
+strcat(cad_final,cad_fin0);
+}
+sprintf(cad_fin0,"MB[label=\"MBR\" color=deepskyblue];\n}\n}");
+strcat(cad_final,cad_fin0);
+FILE* n_arch;
+n_arch=fopen(sec,"w+");
+if(n_arch){
+fseek(n_arch,0,SEEK_SET);
+int longitud=strlen(cad_final);
+fwrite(&cad_final,1,longitud,n_arch);
+}
+fclose(n_arch);
+char cad_gen[100]="";
+sprintf(cad_gen,"dot %s -O %s.%s -T%s",sec,sec,ter1,ter1);
+char cad_gen1[75]="";
+sprintf(cad_gen1,"xdg-open %s.%s",sec,ter1);
+system(cad_gen);
+system(cad_gen1);
+}
+else{printf("error no se pudo abrir archivo\n");}
+}
+else{
+printf("no se encontro id");
+}
+}
+else{
+printf("NO hay unidades montadas\n");
+
+}
+}
 void rep_mbr(char path[],char name[],char id[]){
 montados *auxiliar;
 if(Ini_mont!=NULL){
@@ -83,6 +169,8 @@ if(error==0){
 char *sec,*ter;
 sec= strtok(path,".");
 ter= strtok(NULL," ");
+char ter1[10] ="";
+strcpy(ter1,ter);
 char cad_fin0[1000]="";
 char cad_fin1[1000]="";
 char cad_fin2[1000]="";
@@ -91,9 +179,9 @@ char cad_fin4[1000]="";
 char final_fin[100000]="";
 sprintf(cad_fin0,"digraph struct{\n node [shape=plaintext]\n matriz [label=<\n <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n");
 strcat(final_fin,cad_fin0);
-sprintf(cad_fin1,"<TR>\n<TH>Nombre</TH>\n<TH>Valor</TH>\n</TR>\n");
+sprintf(cad_fin1,"<TR>\n<TD>Nombre</TD>\n<TD>Valor</TD>\n</TR>\n");
 strcat(final_fin,cad_fin1);
-sprintf(cad_fin2,"<TR>\n<TD>mbr_tamaño</TD>\n<TH>%i</TD>\n</TR>\n",principal.tamaio_mbr);
+sprintf(cad_fin2,"<TR>\n<TD>mbr_tamaño</TD>\n<TD>%i</TD>\n</TR>\n",principal.tamaio_mbr);
 strcat(final_fin,cad_fin2);
 sprintf(cad_fin3,"<TR>\n<TD>mbr_fecha_creacion</TD>\n<TD>%i/%i/%i %i:%i</TD>\n</TR>\n",principal.dia,principal.mes,principal.anio,principal.hora,principal.min);
 strcat(final_fin,cad_fin3);
@@ -131,6 +219,12 @@ int longitud=strlen(final_fin);
 fwrite(&final_fin,1,longitud,n_arch);
 }
 fclose(n_arch);
+char cad_gen[100]="";
+sprintf(cad_gen,"dot %s -O %s.%s -T%s",sec,sec,ter1,ter1);
+char cad_gen1[75]="";
+sprintf(cad_gen1,"xdg-open %s.%s",sec,ter1);
+system(cad_gen);
+system(cad_gen1);
 }
 else{printf("error no se pudo abrir archivo\n");}
 }
@@ -140,7 +234,6 @@ printf("no se encontro id");
 }
 else{
 printf("NO hay unidades montadas\n");
-
 }
 }
 void solo_mount(){
@@ -451,7 +544,7 @@ printf("total:\n guardar:%s\n reporte:%s\n buscar:%s\n",path,name,id);
 if(strcmp(name,"mbr")==0){
  rep_mbr(path,name,id);
 }else if(strcmp(name,"disk")==0){
-
+rep_disk(path,name,id);
 }
 else{
 printf("comando incorrecto por el momento");
@@ -518,8 +611,11 @@ else{printf("error\n");}
 }
 }
 }
-void fue_umount(char cad[] /*, char id[] */){
-imprimir_rashos(cad);
+void fue_umount(char cad[]){
+char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
+prin = strtok(cad," ");
+otro = strtok(NULL,"\n");
+printf("cadena:%s",prin);
 }
 void fue_mount(char cad[],char path[],char name[]){
 if(cad==NULL){
