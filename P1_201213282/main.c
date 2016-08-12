@@ -26,6 +26,16 @@ int tama;
 int sig;
 char nom[16];
 }Extended_Boot_Record;
+typedef struct montados{
+char path[75];
+char name[20];
+char id[6];
+int num;
+struct montados *sig;
+}montados;
+
+ montados *Ini_mont;
+
 void imprimir_rashos(char path[]){
 printf("%s\n ",path);
 struct Master_Boot_Record uno;
@@ -47,7 +57,86 @@ printf("Inactiva:%c\n",auxiliar.status);
 }
 }
 }
+void solo_mount(){
+if(Ini_mont!=NULL){
+struct montados *aux = Ini_mont;
+while(aux!=NULL){
+printf("-id:%s -path:%s -nombre:%s\n",aux->id,aux->path,aux->name);
+aux = aux->sig;
+}
+}
+else{
+printf("No hay particiones montadas\n");
+}
+}
+void accion_mount(char path[],char name[]){
 
+int mayor =0; int encontrado=0; int error_hay=0;
+int fin=1;  char idf[6]="vd";
+char *new_nam=""; char *new_path="";
+montados* nuevo =(struct montados*)malloc(sizeof(struct montados));
+new_nam = name;
+strcpy(nuevo->name,new_nam);
+strcpy(nuevo->path,path);
+if(Ini_mont!=NULL){
+montados* aux = Ini_mont;
+do{
+if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)!=0){
+    mayor=aux->num; fin++; encontrado=1;}
+else if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)!=0){
+printf("Error particion ya cargada"); error_hay=1;}
+else{
+if(mayor<aux->num){
+    mayor = aux->num;
+}
+}
+if(aux->sig!=NULL){aux=aux->sig;}
+}
+while(aux->sig!=NULL&&error_hay==0);
+if(error_hay==0){
+if(encontrado!=0){
+nuevo->num = mayor;
+int libre= 48+fin;
+int libre1=96+mayor;
+char pe = (char)libre1;
+char ul = (char)libre;
+idf[2]=pe;
+idf[3]=ul;
+printf("el id sera:%s",idf);
+strcpy(nuevo->id,idf);
+//nuevo->id = idf;
+aux->sig = nuevo;
+nuevo->sig = NULL;
+}else{
+nuevo->num=mayor+1;
+int libre= 48+fin;
+int libre1 = 96+mayor+1;
+char pe = (char)libre1;
+char ul = (char)libre;
+idf[2]=pe;
+idf[3]=ul;
+printf("el id sera:%s",idf);
+strcpy(nuevo->id,idf);
+//nuevo->id = idf;
+aux->sig = nuevo;
+nuevo->sig = NULL;
+}
+}
+}
+else{
+nuevo->num=1;
+int libre= 48+fin;
+char pe = (char)97;
+char ul = (char)libre;
+idf[2]=pe;
+idf[3]=ul;
+printf("el id sera:%s\n",idf);
+strcpy(nuevo->id,idf);
+//nuevo->id = idf;
+Ini_mont = nuevo;
+nuevo->sig = NULL;
+}
+}
 void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
 FILE* archivo;
 archivo=fopen(path,"r+b");
@@ -73,6 +162,10 @@ if(auxiliar.status=='A'){
 ocupadas++;
 if(auxiliar.type=='E'){
 Bool_extend = 1;}}}
+for(int i =0; i<4;i++){
+auxiliar = prueba.particion[i];
+if(strcmp(auxiliar.name,name)==0){
+hay_error=6;}}
 if(strlen(name)<=16){
 strcpy(nuevo.name,name);}else{
 hay_error = 3;// nombre mayora a 16 caracteres
@@ -126,11 +219,10 @@ hay_error = 4; /*no hay suficiente espacio en el disco */
 }}}
 if(hay_error==0){
 if(ocupadas==0){
-printf("---entro\n");
 nuevo.status ='A';
 prueba.particion[0]=nuevo;
 }
-else{printf("---entro1\n");
+else{
 for(int i =0;i<ocupadas+1;i++){
 auxiliar = prueba.particion[i];
 struct MBR_particion aux;
@@ -148,11 +240,12 @@ fclose(archivo);
 printf("\nparticion creada exitosamente\n");}
 else{
 switch(hay_error){
-case 1: printf("Ya hay particion extendida"); break;
-case 2: printf("NO hay particion extendida para crear la logica"); break;
-case 3: printf("Nombre mayor a 16 caracteres"); break;
-case 4: printf("No hay espacio suficiente en el disco"); break;
-default: printf("Ya hay 4 particiones en el disco");
+case 1: printf("Ya hay particion extendida\n"); break;
+case 2: printf("NO hay particion extendida para crear la logica\n"); break;
+case 3: printf("Nombre mayor a 16 caracteres\n"); break;
+case 4: printf("No hay espacio suficiente en el disco\n"); break;
+case 6: printf("Nombre repetido\n"); break;
+default: printf("Ya hay 4 particiones en el disco\n");
 }}}
 }
 void accion_fdisk_add(int add,char path[],int unit,char name[]){printf("Añadir\n");}
@@ -188,7 +281,6 @@ printf("Particion Eliminada\n");}
 }
 void accion_rmdisk(char path[]){
 FILE* archivo;
-printf("\npath:%s\n",path);
 archivo=fopen(path,"rb");
 if(archivo){
 fclose(archivo);
@@ -226,7 +318,6 @@ master.particion[i] = auxiliar;}
 if(unit==1){
 int tam = size*1000000;
 master.tamaio_mbr = tam;
-printf("%i  tam:%i",master.min,master.tamaio_mbr);
 char a[1000] ="";
 for(int j=0;j<1000;j++){int i=0;
 while(i<size){
@@ -236,7 +327,6 @@ i++;}}
 else{
 int tama = size*1000;
 master.tamaio_mbr = tama;
-printf("%i  tam:%i",master.min,master.tamaio_mbr);
 char a[1000] ="";
 for(int j=0;j<size;j++){
 fwrite (a,1,sizeof(a),archivo);}
@@ -246,16 +336,56 @@ archivo= fopen(path,"r+b");
 fseek(archivo,0,SEEK_SET);
 fwrite(&master,sizeof(master),1,archivo);
 fclose(archivo);
+printf("Disco creado exitosamente\n");
 }
+}
+void fue_rep(char cad[],char name[],char path[],char id[]){
+/*
+if(strcmp(sec,"-path")==0){//direccion de carpeta
+DIR *dirp;
+ struct dirent *direntp;
+char* ter1 = strtok(ter,"\"");
+sec1 = strtok(NULL,"\""); //falta comprobar archivos.
+sec = ter1; int dig =0;
+char cad11[100] = ""; int i =0;
+while(*sec!='\0'){
+if(*sec=='?'){
+cad11[i]=' ';
+}else{
+cad11[i]=*sec;
+}
+if(*sec=='/'){
+if(dig=!0){
+dirp = opendir(cad11);
+ if (dirp == NULL){
+ mkdir(cad11,0776);
+ }
+ }
+else{dig++;}
+}
+sec++;
+i++;
+}
+ path=cad11;
+printf("cadena:%s\n",path);
+}
+*/
 }
 void fue_umount(char cad[] /*, char id[] */){
 imprimir_rashos(cad);
 }
 void fue_mount(char cad[],char path[],char name[]){
+if(cad==NULL){
+if(strcmp(path,"")!=0&&strcmp(name,"")!=0){
+accion_mount(path,name);
+}else{printf("faltan parametros\n");}
+}
+else{
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
 otro = strtok(NULL,"\n");
-printf("\nveamos: %s",otro);
+if((otro!= NULL) && (otro[0]!='\0')) {}
+else{free(otro); char* otro ="";}
 char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
 int ver = 0;
 int comprobante = 0;
@@ -271,8 +401,27 @@ sec1= strtok(NULL," ");
 ter = strtok(sec1,":");
 if(strcmp(sec,"-path")==0){//direccion de carpeta
 char* ter1 = strtok(ter,"\"");
-sec1 = strtok(NULL,"\""); //falta comprobar archivos.
+sec1 = strtok(NULL,"\"");
+sec = ter1;
+char un[50]=""; int i=0;
+strncpy(un,sec,50);
+while(*sec!='\0'){
+if(*sec=='?'){un[i]=' ';}
+sec++;
+i++;
 }
+FILE* archivo;
+archivo=fopen(un,"r+b");
+if(archivo){
+int a = fclose(archivo);
+if(a ==0){path=un;
+fue_mount(otro,path,name);
+}
+else{printf("no se cerro correctamente");}
+ }
+else{
+printf("error, el archivo no se pudo abrir\n");
+}}
 else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
 char* sec2 = strtok(ter,"\"");
 char *ter1 = strtok(NULL,"\"");
@@ -280,11 +429,17 @@ char ter2[20] ="";
 strncpy(ter2,sec2,20);
 sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
-if(strcmp(ter1,"dsk")==0){
-name = ter2;}else{
-printf("extension incorrecta");}
+sec1 = ter2; int i =0;
+while(*sec1!='\0'){
+if(*sec1=='?'){ter2[i]=' ';}
+i++; sec1++;
 }
+name = ter2;
+fue_mount(otro,path,name);
 }
+else{
+printf("parametro incorrecto\n");
+}}}
 }
 void fue_fdisk(char cad[], int size, int unit, char path[], int type, int fit, int Delete,char name[], int add){
 if(cad==NULL){
@@ -355,7 +510,6 @@ if(*sec=='?'){un[i]=' ';}
 sec++;
 i++;
 }
-printf("\ncadena:%s\n",un);
 FILE* archivo;
 archivo=fopen(un,"r+b");
 if(archivo){
@@ -373,6 +527,11 @@ char ter2[20] ="";
 strncpy(ter2,sec2,20);
 sec1 = strtok(sec2,".");
 ter1= strtok(NULL," ");
+sec1 = ter2; int i =0;
+while(*sec1!='\0'){
+if(*sec1=='?'){ter2[i]=' ';}
+i++; sec1++;
+}
 name = ter2;
 fue_fdisk(otro,size,unit,path,type,fit,Delete,name,add);
 }
@@ -430,7 +589,6 @@ ter2[i]=' ';
 sec++;
 i++;
 }
-printf("\neliminara: %s",ter2);
 accion_rmdisk(ter2);
 }else{
 printf("extension incorrecta");}
@@ -545,7 +703,6 @@ i++;
 }
 analizar_cadena(cad);
 }
-
 void fue_exec(char cad[]){
 FILE* archivo;
 archivo=fopen(cad,"r");
@@ -574,7 +731,6 @@ i++;}
 fclose(archivo);
 }
 int analizar_cadena(char cadena[]){
-printf("\ncadena: %s\n",cadena);
  char* pch; int salir = 1;
    pch = strtok(cadena," ");
    if(strcmp(pch,"mkdisk")==0){
@@ -587,13 +743,19 @@ printf("\ncadena: %s\n",cadena);
    cadena = pch;
    fue_rmdisk(cadena,"",0);}
    else if(strcmp(pch,"fdisk")==0){
-   printf("\n entro");
    pch = strtok (NULL,"\n");
    cadena = pch;
    fue_fdisk(cadena,0,0,"",0,0,0,"",0);
    }
    else if(strcmp(pch,"mount")==0){
-   printf("mount cuantro");}
+   pch = strtok (NULL,"\n");
+   cadena = pch;
+   if(cadena!=NULL&&cadena[0]!='\0'){
+   fue_mount(cadena,"","");
+   }else{
+    solo_mount();
+   }
+   }
    else if(strcmp(pch,"umount")==0){
    pch = strtok (NULL,"\n");
    cadena = pch;
@@ -690,6 +852,7 @@ return num;}
 int main()
 {
 int num =1;
+Ini_mont = NULL;
 do{
     num=menu();}
     while(num!=0);
