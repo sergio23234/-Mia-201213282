@@ -236,6 +236,16 @@ else{
 printf("NO hay unidades montadas\n");
 }
 }
+void accion_umount(char cad[]){
+char *pri,*sec; int fin =0;
+while(fin!=0){
+pri = strtok(cad,";");
+sec= strtok(NULL,"\0");
+if ((sec!= NULL) && (sec[0] != '\0')) {
+}else{fin=4;}
+printf("dato:%s\n",pri);
+}
+}
 void solo_mount(){
 if(Ini_mont!=NULL){
 struct montados *aux = Ini_mont;
@@ -275,7 +285,7 @@ montados* aux = Ini_mont;
 do{
 if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)!=0){
     mayor=aux->num; fin++; encontrado=1;}
-else if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)!=0){
+else if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)==0){
 printf("Error particion ya cargada\n"); error_hay=1;}
 else{
 if(mayor<aux->num){
@@ -479,12 +489,15 @@ FILE* archivo;
 archivo=fopen(path,"rb");
 if(archivo){
 fclose(archivo);
-int a = remove(path);
+printf("desea remover este archivo: S/N___");
+char c=getchar();
+if((c)=='s'||(c)=='S'){int a = remove(path);
 if(a==0){
-printf("\neliminado exitosamente\n");
+printf("\n eliminado exitosamente\n");
 }else{
-printf("\n no eliminado\n");
+printf("\n no eliminado\n");}
 }
+else{printf("\n no eliminado\n");}
 }else{
 printf("\nel archivo no existe\n");
 }
@@ -611,11 +624,43 @@ else{printf("error\n");}
 }
 }
 }
-void fue_umount(char cad[]){
+void fue_umount(char cad[],int id,char envio[]){
+if(cad==NULL){
+if(strcmp(envio,"")!=0){accion_umount(envio);}
+else{printf("\nerror faltan parametros\n");}
+}
+else{
 char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
 prin = strtok(cad," ");
-otro = strtok(NULL,"\n");
-printf("cadena:%s",prin);
+otro = strtok(NULL,"\0");
+if ((otro!= NULL) && (otro[0] != '\0')) {
+}else{free(otro); char* otro ="";}
+char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
+int ver = 0;
+int comprobante = 0;
+char* aux = prin;
+while(*prin !=32&&comprobante==0){
+if(*prin==58){ver++;}
+if(ver==2){comprobante = 1;}
+prin++;}
+prin = aux;
+if(comprobante==1){
+char *sec1;
+sec = strtok(prin,"::");
+sec1= strtok(NULL," ");
+ter = strtok(sec1,":");
+char cadena1[5]="-id";
+int nume_c=49+id;
+cadena1[3]=(char)nume_c;
+if(strcmp(sec,cadena1)==0){
+char cadenanueva[100]="";
+strcat(cadenanueva,ter);
+strcat(cadenanueva,";");
+strcat(cadenanueva,envio);
+id++;
+fue_umount(otro,id,cadenanueva);
+}else{printf("error comando incorrecto");}
+}}
 }
 void fue_mount(char cad[],char path[],char name[]){
 if(cad==NULL){
@@ -873,8 +918,9 @@ fue_mkdisk(otro,size,unit,path,nom);
 }
 else if(strcmp(sec,"+unit")==0){//unidad
 if(strcmp(ter,"m")==0){
-unit = 1;}
-fue_mkdisk(otro,size,unit,path,nom);
+unit = 1;fue_mkdisk(otro,size,unit,path,nom);
+}else if(strcmp(ter,"k")==0){fue_mkdisk(otro,size,unit,path,nom);}
+else{printf("error unidad incorecta");}
 }
 else if(strcmp(sec,"-path")==0){//direccion de carpeta
 DIR *dirp;
@@ -1002,7 +1048,7 @@ int analizar_cadena(char cadena[]){
    else if(strcmp(pch,"umount")==0){
    pch = strtok (NULL,"\n");
    cadena = pch;
-   fue_umount(cadena);}
+   fue_umount(cadena,0,"");}
    else if(strcmp(pch,"salir")==0){
    salir =0;
    }
