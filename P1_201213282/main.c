@@ -126,6 +126,7 @@ fwrite(&cad_final,1,longitud,n_arch);
 }
 fclose(n_arch);
 char cad_gen[100]="";
+char prueba1[50]="";
 sprintf(cad_gen,"dot %s -O %s.%s -T%s",sec,sec,ter1,ter1);
 char cad_gen1[75]="";
 sprintf(cad_gen1,"xdg-open %s.%s",sec,ter1);
@@ -238,12 +239,51 @@ printf("NO hay unidades montadas\n");
 }
 void accion_umount(char cad[]){
 char *pri,*sec; int fin =0;
-while(fin!=0){
+printf("cadena:%s\n",cad);
+while(fin==0){
 pri = strtok(cad,";");
 sec= strtok(NULL,"\0");
-if ((sec!= NULL) && (sec[0] != '\0')) {
-}else{fin=4;}
 printf("dato:%s\n",pri);
+if ((sec!= NULL) && (sec[0] != '\0')) {
+cad = sec;
+}else{fin=4;}
+if(Ini_mont!=NULL){
+if(strcmp(Ini_mont->id,pri)==0&&Ini_mont->sig==NULL){
+Ini_mont == NULL;
+}
+else if(strcmp(Ini_mont->id,pri)!=0&&Ini_mont->sig==NULL){
+printf("disco no encontrado\n"); fin=5;
+}
+else if(strcmp(Ini_mont->id,pri)==0&&Ini_mont->sig!=NULL){
+montados * aux = Ini_mont;
+montados * aux1 = Ini_mont;
+aux= aux->sig;
+Ini_mont = aux;
+aux1->sig = NULL;
+free(aux1);
+printf("Desmontando exitosamente\n");
+}
+else{
+montados * aux = Ini_mont;
+montados * aux1 = Ini_mont;
+while(aux1->sig!=NULL){
+aux1 = aux1->sig;
+if(strcmp(aux1->id,pri)==0){
+montados* aux2 = aux1->sig;
+aux->sig = aux2;
+aux1->sig = NULL;
+free(aux1);
+printf("Desmontando exitosamente\n");
+}
+else{
+aux = aux1;}
+}
+}}else{
+fin==-1;
+}
+}
+if(fin<0){
+printf("No hay disco montado");
 }
 }
 void solo_mount(){
@@ -307,7 +347,7 @@ idf[3]=ul;
 strcpy(nuevo->id,idf);
 aux->sig = nuevo;
 nuevo->sig = NULL;
-printf("particion creada exitosamente\n");
+printf("particion cargada exitosamente\n");
 }
 else{
 nuevo->num=mayor+1;
@@ -613,7 +653,18 @@ path=cad11;
 fue_rep(otro,name,path,id);
 }
 else if(strcmp(sec,"-name")==0){//verificar nombre completo :)
-name = ter;
+char* sec2 = strtok(ter,"\"");
+char *ter1 = strtok(NULL,"\"");
+char ter2[20] ="";
+strncpy(ter2,sec2,20);
+sec1 = strtok(sec2,".");
+ter1= strtok(NULL," ");
+sec1 = ter2; int i =0;
+while(*sec1!='\0'){
+if(*sec1=='?'){ter2[i]=' ';}
+i++; sec1++;
+}
+name = ter2;
 fue_rep(otro,name,path,id);
 }
 else if(strcmp(sec,"-id")==0){//verificar id:)
@@ -1019,6 +1070,46 @@ i++;}
 }}
 fclose(archivo);
 }
+void es_exec(char cad[],char path[]){
+char* prin/*cadena principal que utilizaremas*/; char* otro/*cadena extra que enviarmeos*/;
+prin = strtok(cad," ");
+otro = strtok(NULL,"\n");
+if((otro!= NULL) && (otro[0]!='\0')) {}
+else{free(otro); char* otro ="";}
+char* sec;/*cadena secundaria derivada de la principal*/ char* ter; /*ultima cadena que utilizaremos*/
+int ver = 0;
+int comprobante = 0;
+char* aux = prin;
+while(*prin !=32&&comprobante==0){
+if(*prin==58){ver++;}
+if(ver==2){comprobante = 1;}
+prin++;}
+prin = aux;
+if(comprobante==1){ char *sec1;
+sec = strtok(prin,"::");
+sec1= strtok(NULL," ");
+ter = strtok(sec1,":");
+if(strcmp(sec,"-path")==0){//direccion de carpeta
+char* ter1 = strtok(ter,"\"");
+sec1 = strtok(NULL,"\"");
+sec = ter1;
+char un[50]=""; int i=0;
+strncpy(un,sec,50);
+while(*sec!='\0'){
+if(*sec=='?'){un[i]=' ';}
+sec++;
+i++;
+}
+FILE* archivo;
+archivo=fopen(un,"r+b");
+if(archivo){
+int a = fclose(archivo);
+if(a ==0){path=un;
+fue_exec(path);}else{printf("no se cerro correctamente");}
+ }
+}
+}
+}
 int analizar_cadena(char cadena[]){
  char* pch; int salir = 1;
    pch = strtok(cadena," ");
@@ -1055,7 +1146,7 @@ int analizar_cadena(char cadena[]){
    else if(strcmp(pch,"exec")==0){
    pch = strtok (NULL,"\n");
    cadena = pch;
-   fue_exec(cadena);
+   es_exec(cadena,"");
    }
    else if(strcmp(pch,"rep")==0){
    pch = strtok (NULL,"\n");
