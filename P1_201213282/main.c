@@ -382,16 +382,47 @@ else{
 printf("nombre de la particion incorrecto\n");
 }
 }
-int  fdsik_normal_logico(int size,int unit,char path[],int type,int fit,char name[]){
+int  fdsik_normal_logico(int size,char unit,char path[],char fit,char name[]){
 struct Master_Boot_Record principal;
  FILE* archivo;
+ int posicion = 0;
+struct Extended_Boot_Record nuevo;
+struct Extended_Boot_Record aux;
+struct MBR_particion auxiliar;
+nuevo.tama = size;
+strcpy(nuevo.nom,name);
 archivo=fopen(path,"rb");
   if(archivo){
 fseek(archivo,0,SEEK_SET);
 fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
-}fclose(archivo);
-struct Extended_Boot_Record nuevo;
+for(int i =0;i<4;i++){
+if(principal.particion[i].type=='E'){
+auxiliar = principal.particion[i];
+}}
+int tama_ext = auxiliar.part_ini+auxiliar.size;
+aux = auxiliar.extendida;
+if(aux.status=='I'){
+aux.inicio_E = auxiliar.part_ini; //bit de inicio asignado
+int total_logico = aux.inicio_E+size;
+if(total_logico>tama_ext){
+fclose(archivo);
+return 1; //error 1 el tamaño excede el tamaño de la particion logica
+}
+else{
+aux.tama = size; //tamaño asignado
+strcpy(aux.nom,name);//nombre asignado
+aux.fit = fit; //tipo de asignacion
+aux.status ='A';// status
+if(total_logico==tama_ext){ //siguiente asignado
+aux.sig = -1;
+}
+else{aux.sig=total_logico;}
 
+fwrite(&principal,1,sizeof(struct Master_Boot_Record),archivo);
+
+}
+}
+}fclose(archivo);
 }
 void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
 FILE* archivo;
