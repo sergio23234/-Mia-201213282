@@ -3,21 +3,6 @@
 #include <string.h>
 #include <dirent.h>
 #include <time.h>
-struct MBR_particion{
-char status;
-char type;
-char fit;
-int part_ini;
-int size;
-char name[16];
-}MBR_particion;
-struct Master_Boot_Record{
-int tamaio_mbr;
-int dia; int mes; int anio;
-int hora; int min;
-int mbr_disk_signature;
-struct MBR_particion particion[4];
-}Master_Boot_Record;
 struct Extended_Boot_Record{
 char status;
 char fit;
@@ -26,6 +11,22 @@ int tama;
 int sig;
 char nom[16];
 }Extended_Boot_Record;
+struct MBR_particion{
+char status;
+char type;
+char fit;
+int part_ini;
+int size;
+char name[16];
+struct Extended_Boot_Record extendida;
+}MBR_particion;
+struct Master_Boot_Record{
+int tamaio_mbr;
+int dia; int mes; int anio;
+int hora; int min;
+int mbr_disk_signature;
+struct MBR_particion particion[4];
+}Master_Boot_Record;
 typedef struct montados{
 char path[75];
 char name[20];
@@ -33,8 +34,7 @@ char id[6];
 int num;
 struct montados *sig;
 }montados;
-
- montados *Ini_mont;
+montados *Ini_mont;
 
 void imprimir_rashos(char path[]){
 printf("%s\n ",path);
@@ -382,8 +382,20 @@ else{
 printf("nombre de la particion incorrecto\n");
 }
 }
+int  fdsik_normal_logico(int size,int unit,char path[],int type,int fit,char name[]){
+struct Master_Boot_Record principal;
+ FILE* archivo;
+archivo=fopen(path,"rb");
+  if(archivo){
+fseek(archivo,0,SEEK_SET);
+fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
+}fclose(archivo);
+struct Extended_Boot_Record nuevo;
+
+}
 void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
 FILE* archivo;
+int logico =0;
 archivo=fopen(path,"r+b");
 struct Master_Boot_Record prueba;
 struct MBR_particion nuevo;
@@ -391,6 +403,7 @@ if((size<2000&&unit==0)||(size<2&&unit==1)||(size<2000000&&unit==2)){
 printf("error tamaño minimo para una particion es de 2MB");
 }
 else{
+int es_logica=0;
 int hay_error = 0;
 if(archivo){
 fseek(archivo,0,SEEK_SET);
@@ -463,6 +476,9 @@ else{
 hay_error = 4; /*no hay suficiente espacio en el disco */
 }}}
 if(hay_error==0){
+if(nuevo.type=='L'){
+}
+else{
 if(ocupadas==0){
 nuevo.status ='A';
 prueba.particion[0]=nuevo;
@@ -476,6 +492,11 @@ aux = prueba.particion[i];
 prueba.particion[i]=nuevo;
 nuevo = prueba.particion[i];}}
 }
+if(nuevo.type=='E'){
+struct Extended_Boot_Record logicon;
+logicon.status = 'I';
+nuevo.extendida = logicon;
+}
 nuevo.status ='A';
 archivo= fopen(path,"r+b");
 void rewind (archivo);
@@ -483,6 +504,7 @@ fseek(archivo,0,SEEK_SET);
 fwrite(&prueba,1,sizeof(struct Master_Boot_Record),archivo);
 fclose(archivo);
 printf("\nparticion creada exitosamente\n");}
+}
 else{
 switch(hay_error){
 case 1: printf("Ya hay particion extendida\n"); break;
