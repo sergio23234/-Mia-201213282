@@ -4,12 +4,12 @@
 #include <dirent.h>
 #include <time.h>
 struct Extended_Boot_Record{
-char status;
-char fit;
-int inicio_E;
-int tama;
-int sig;
-char nom[16];
+char status;// I inactivo o A activo
+char fit; //ajuste para asignar espacion
+int inicio_E; //bit de inicio
+int tama; //tamaño
+int sig; //siguiente particion extendida
+char nom[16]; //nombre de la particion
 }Extended_Boot_Record;
 struct MBR_particion{
 char status;
@@ -18,7 +18,6 @@ char fit;
 int part_ini;
 int size;
 char name[16];
-struct Extended_Boot_Record extendida;
 }MBR_particion;
 struct Master_Boot_Record{
 int tamaio_mbr;
@@ -35,7 +34,6 @@ int num;
 struct montados *sig;
 }montados;
 montados *Ini_mont;
-
 void imprimir_rashos(char path[]){
 printf("%s\n ",path);
 struct Master_Boot_Record uno;
@@ -300,18 +298,44 @@ printf("No hay particiones montadas\n");
 }
 void accion_mount(char path[],char name[]){
  struct Master_Boot_Record principal;
+ struct Extended_Boot_Record primero;
  FILE* archivo;
  int si_lo_encontro=0;
 archivo=fopen(path,"rb");
   if(archivo){
 fseek(archivo,0,SEEK_SET);
 fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
-}fclose(archivo);
 struct MBR_particion auxiliar;
-for(int i =0; i<4;i++){
+for(int i =0; i<4&&si_lo_encontro==0;i++){
 auxiliar = principal.particion[i];
 if(strcmp(auxiliar.name,name)==0){
-si_lo_encontro=1;}}
+si_lo_encontro=1;}
+if(auxiliar.type=='E'){
+fseek(archivo,0,auxiliar.part_ini);
+fread(&primero,1,sizeof(struct Extended_Boot_Record),archivo);
+if(primero.status=='A'){
+if(strcmp(primero.nom,name)==0){
+si_lo_encontro = 1;
+}
+}
+else{
+int existe = 0;
+while(existe==0){
+int sig = primero.sig;
+if(sig!=-1){
+fseek(archivo,0,sig);
+fread(&primero,1,sizeof(struct Extended_Boot_Record),archivo);
+if(primero.status=='A'){
+if(strcmp(primero.nom,name)==0){
+si_lo_encontro = 1;
+existe =1;}
+}else{existe=-12;}
+}
+else{existe =-12;}
+}
+}
+}
+}
 if(si_lo_encontro!=0){
 int mayor =0; int encontrado=0; int error_hay=0;
 int fin=1;  char idf[6]="vd";
@@ -381,8 +405,9 @@ printf("particion creada exitosamente\n");
 else{
 printf("nombre de la particion incorrecto\n");
 }
+}fclose(archivo);
 }
-int  fdsik_normal_logico(int size,char unit,char path[],char fit,char name[]){
+int  fdsik_normal_logico(int size,char path[],char fit,char name[]){
 struct Master_Boot_Record principal;
  FILE* archivo;
  int posicion = 0;
@@ -391,7 +416,7 @@ struct Extended_Boot_Record aux;
 struct MBR_particion auxiliar;
 nuevo.tama = size;
 strcpy(nuevo.nom,name);
-archivo=fopen(path,"rb");
+archivo=fopen(path,"r+b");
   if(archivo){
 fseek(archivo,0,SEEK_SET);
 fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
@@ -400,7 +425,8 @@ if(principal.particion[i].type=='E'){
 auxiliar = principal.particion[i];
 }}
 int tama_ext = auxiliar.part_ini+auxiliar.size;
-aux = auxiliar.extendida;
+fseek(archivo,0,auxiliar.part_ini);
+fread(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
 if(aux.status=='I'){
 aux.inicio_E = auxiliar.part_ini; //bit de inicio asignado
 int total_logico = aux.inicio_E+size;
@@ -413,16 +439,76 @@ aux.tama = size; //tamaño asignado
 strcpy(aux.nom,name);//nombre asignado
 aux.fit = fit; //tipo de asignacion
 aux.status ='A';// status
-if(total_logico==tama_ext){ //siguiente asignado
+int libre = tama_ext - total_logico;
+if(libre<2000000){ //siguiente asignado
 aux.sig = -1;
 }
 else{aux.sig=total_logico;}
-
-fwrite(&principal,1,sizeof(struct Master_Boot_Record),archivo);
-
+fseek(archivo,0,auxiliar.part_ini);
+fwrite(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
+if(aux.sig!=-1){
+struct Extended_Boot_Record nuevo_extra;
+nuevo_extra.status = 'I';
+fseek(archivo,0,aux.sig);
+fwrite(&nuevo_extra,1,sizeof(struct Extended_Boot_Record),archivo);
+}
+printf("nombre archivo: %s + bit inicio:%i status:%c\n",aux.nom,aux.inicio_E,aux.status);
 }
 }
-}fclose(archivo);
+else{
+int encontrado = 0;
+while(encontrado==0){
+int bit_ini = aux.sig;
+if(bit_ini!=-1){
+void rewind (archivo);
+fseek(archivo,0,bit_ini);
+fread(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
+if(aux.status=='I'){
+aux.inicio_E = bit_ini;
+encontrado = 1;
+}
+}
+else{
+encontrado = -1;
+}
+}
+if(encontrado>0){
+int total_logico = aux.inicio_E+size;
+if(total_logico>tama_ext){
+fclose(archivo);
+return 1; //error 1 el tamaño excede el tamaño de la particion logica
+}
+else{
+aux.tama = size; //tamaño asignado
+strcpy(aux.nom,name);//nombre asignado
+aux.fit = fit; //tipo de asignacion
+aux.status ='A';// status
+int libre = tama_ext - total_logico;
+if(libre<2000000){ //siguiente asignado
+aux.sig = -1;
+}
+else{aux.sig=total_logico;}
+void rewind (archivo);
+fseek(archivo,0,aux.inicio_E);
+fwrite(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
+if(aux.sig!=-1){
+struct Extended_Boot_Record nuevo_extra;
+nuevo_extra.status = 'I';
+void rewind (archivo);
+fseek(archivo,0,aux.sig);
+fwrite(&nuevo_extra,1,sizeof(struct Extended_Boot_Record),archivo);
+}
+printf("nombre archivo: %s + bit inicio:%i bit siguiente:%i\n",aux.nom,aux.inicio_E,aux.sig);
+}
+}
+else{
+fclose(archivo);
+return 2; //no se pueden crear mas particiones Logicas
+}
+}
+}
+fclose(archivo);
+return 0;
 }
 void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
 FILE* archivo;
@@ -474,10 +560,10 @@ if(ocupadas==0){
 if(prueba.tamaio_mbr>=nuevo.size){
 nuevo.part_ini = sizeof(struct Master_Boot_Record);
 }else{hay_error=4;/*no hay suficiente espacio en el disco */}
-}else if (ocupadas ==4){
+}else if (ocupadas ==4&&nuevo.type!='L'){
 hay_error = 5; /*NO hay mas particiones disponibles*/
 }
-else{
+else if(nuevo.type!='L'){
 int error_espacio = 1; //no hay espacio
 for(int i=0;i<ocupadas;i++){
 auxiliar = prueba.particion[i];
@@ -505,9 +591,17 @@ prueba.particion[ocupadas] = nuevo;
 }
 else{
 hay_error = 4; /*no hay suficiente espacio en el disco */
-}}}
+}}
+}
 if(hay_error==0){
 if(nuevo.type=='L'){
+int a = fdsik_normal_logico(nuevo.size,path,nuevo.fit,nuevo.name);
+switch(a){
+case 0 : printf("Particion Logica creada exitosamente\n"); break;
+case 1 : printf("Tamaño ingresado mayor al tamaño disponible\n"); break;
+case 2: printf("No se pueden crear mas particiones logicas\n"); break;
+default: printf("NO se que paso \n");
+}
 }
 else{
 if(ocupadas==0){
@@ -526,8 +620,17 @@ nuevo = prueba.particion[i];}}
 if(nuevo.type=='E'){
 struct Extended_Boot_Record logicon;
 logicon.status = 'I';
-nuevo.extendida = logicon;
+nuevo.status ='A';
+archivo= fopen(path,"r+b");
+fseek(archivo,0,SEEK_SET);
+fwrite(&prueba,1,sizeof(struct Master_Boot_Record),archivo);
+void rewind (archivo);
+fseek(archivo,0,nuevo.part_ini);
+fwrite(&logicon,1,sizeof(struct Extended_Boot_Record),archivo);
+fclose(archivo);
+printf("\nparticion creada exitosamente\n");
 }
+else{
 nuevo.status ='A';
 archivo= fopen(path,"r+b");
 void rewind (archivo);
@@ -535,6 +638,7 @@ fseek(archivo,0,SEEK_SET);
 fwrite(&prueba,1,sizeof(struct Master_Boot_Record),archivo);
 fclose(archivo);
 printf("\nparticion creada exitosamente\n");}
+}
 }
 else{
 switch(hay_error){
@@ -594,6 +698,7 @@ else{printf("\n no eliminado\n");}
 }else{
 printf("\nel archivo no existe\n");
 }
+getchar();
 }
 void accion_mkdisk(int size,char path[],char nom[],int unit){
 if(unit==0&&size<10000||unit==1&&size<10){
