@@ -3,7 +3,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <time.h>
-struct Extended_Boot_Record{
+typedef struct Extended_Boot_Record{
 char status;// I inactivo o A activo
 char fit; //ajuste para asignar espacion
 int inicio_E; //bit de inicio
@@ -11,7 +11,7 @@ int tama; //tamaño
 int sig; //siguiente particion extendida
 char nom[16]; //nombre de la particion
 }Extended_Boot_Record;
-struct MBR_particion{
+typedef struct MBR_particion{
 char status;
 char type;
 char fit;
@@ -19,41 +19,77 @@ int part_ini;
 int size;
 char name[16];
 }MBR_particion;
-struct Master_Boot_Record{
+typedef struct Master_Boot_Record{
 int tamaio_mbr;
 int dia; int mes; int anio;
 int hora; int min;
 int mbr_disk_signature;
 struct MBR_particion particion[4];
 }Master_Boot_Record;
+typedef struct Super_bloque{
+int s_filesystem_type; //sitema de fichero ext2 o ext3
+int s_inodes_count;  // numero de inodos en el Disco duro
+int s_blocks_count; // numero de bloques en el Disco duro
+int s_free_blocks_count;//bloque libres en el disco duro
+int s_free_inodes_count;//inodos libres en el disco duro
+int dia_m; int mes_m; int anio_m; //ultima fecha en que fue montado
+int dia_u; int mes_u; int anio_u; //ultima fecha en que fue desmontado
+int mnt_count; //cuantas veces se ha montado el sistema;
+int s_magic; //identificara el sistema de archivos tendra valor 0xEF53-->61267
+int s_inodo_size; //tamaño del inodo
+int s_block_size; //tamaño del bloque
+int s_first_ino; //primer inodo libre;
+int s_first_blo; //primer bloque libre;
+int s_bm_inodo_start; //inicio del mapa de inodos
+int s_bm_block_start; //inicio del mapa de bloques
+int s_inodo_start; //inicio de la tabla de inodos
+int s_block_start; //inicio de la tabla de bloques
+}Super_bloque;
+typedef struct Journaling{
+char tipo_operacion[20]; //añadir/eliminar/modificar archivo/carpeta
+int tipo; //0 archivo y 1 carpeta;
+char name[100]; //nombre del archvio
+char conte[300]; //contenido
+int dia;int mes; int anio; //fecha
+char propietario[100]; //propietario del archivo
+int permisos; //permisos
+}Journaling;
+typedef struct T_inodo{
+int i_link; //numero de enlaces duros;
+int i_uid; // UID del usuario propietario del archivo o carpeta;
+int i_gid; // GID del grupo al que pertenece el archivo o carpeta;
+int i_size; //tamao del fichero en bytes
+int i_dia; int i_mes; int i_ani; //fecha que se leyo el inodo sin modificarlos
+int i_diac; int i_mesc; int i_anic; //fecha que se creo el inodo
+int m_dia; int m_mes; int m_ani; //fecha de la ultima modificacion del inodo
+int i_block[15]; //bloques de inodos 12 Directos y 3 Indirectos
+char i_type; //inidica si es archivo a, carpeta c o enlace simbolico e;
+int i_perm[9];
+}T_inodo;
+typedef struct B_content{
+char b_name[12]; //nombre carpeta o archivo;
+int  b_inodo; //apuntado al inodo;
+}B_content;
+typedef struct T_bloque{
+struct B_content b_contenido[4]; //contenido de apuntadores a inodos
+}T_bloque;
+typedef struct B_arch{
+char b_contenido[64]; //contenido del archivo solo 64 bits por bloque
+}
+typedef struct Indirect_Po{
+int b_pointers[16];//bloque inidirecto que apunta a carpeta o archivo
+}
 typedef struct montados{
-char path[75];
-char name[20];
+char path[100];
+char name[16];
 char id[6];
 int num;
 struct montados *sig;
 }montados;
 montados *Ini_mont;
+
 void imprimir_rashos(char path[]){
-printf("%s\n ",path);
-struct Master_Boot_Record uno;
-FILE* archivo;
-archivo=fopen(path,"rb");
-if(archivo){
-fseek(archivo,0,SEEK_SET);
-fread(&uno,1,sizeof(struct Master_Boot_Record),archivo);
-}fclose(archivo);
-struct MBR_particion auxiliar;
-for(int i = 0; i<4;i++){
-auxiliar = uno.particion[i];
-char a = 'A';
-if(auxiliar.status=='A'){
-printf("datos:\n nombre:%s\n bit_ini:%i tam:%i tipo:%c\n ",auxiliar.name,auxiliar.part_ini,auxiliar.size,auxiliar.type);
-}
-else{
-printf("Inactiva:%c\n",auxiliar.status);
-}
-}
+
 }
 void rep_disk(char path[],char name[],char id[]){
 montados *auxiliar;
@@ -311,20 +347,20 @@ auxiliar = principal.particion[i];
 if(strcmp(auxiliar.name,name)==0){
 si_lo_encontro=1;}
 if(auxiliar.type=='E'){
-fseek(archivo,0,auxiliar.part_ini);
+fseek(archivo,auxiliar.part_ini,SEEK_SET);
 fread(&primero,1,sizeof(struct Extended_Boot_Record),archivo);
 if(primero.status=='A'){
 if(strcmp(primero.nom,name)==0){
 si_lo_encontro = 1;
-}
 }
 else{
 int existe = 0;
 while(existe==0){
 int sig = primero.sig;
 if(sig!=-1){
-fseek(archivo,0,sig);
+fseek(archivo,sig,SEEK_SET);
 fread(&primero,1,sizeof(struct Extended_Boot_Record),archivo);
+fprintf("\ndatos:%c, nombre:%s siguiente:%i\n",primero.status,primero.nom,primero.sig);
 if(primero.status=='A'){
 if(strcmp(primero.nom,name)==0){
 si_lo_encontro = 1;
@@ -336,10 +372,11 @@ else{existe =-12;}
 }
 }
 }
+}
 if(si_lo_encontro!=0){
 int mayor =0; int encontrado=0; int error_hay=0;
 int fin=1;  char idf[6]="vd";
-char *new_nam=""; char *new_path="";
+char *new_nam="";
 montados* nuevo =(struct montados*)malloc(sizeof(struct montados));
 new_nam = name;
 strcpy(nuevo->name,new_nam);
@@ -348,7 +385,8 @@ if(Ini_mont!=NULL){
 montados* aux = Ini_mont;
 do{
 if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)!=0){
-    mayor=aux->num; fin++; encontrado=1;}
+    mayor=aux->num; fin++; encontrado=1;
+    }
 else if(strcmp(path,aux->path)==0&&strcmp(name,aux->name)==0){
 printf("Error particion ya cargada\n"); error_hay=1;}
 else{
@@ -384,7 +422,7 @@ idf[3]=ul;
 strcpy(nuevo->id,idf);
 aux->sig = nuevo;
 nuevo->sig = NULL;
-printf("particion creada exitosamente\n");
+printf("particion cargada exitosamente\n");
 }
 }
 }
@@ -398,7 +436,7 @@ idf[3]=ul;
 strcpy(nuevo->id,idf);
 Ini_mont = nuevo;
 nuevo->sig = NULL;
-printf("particion creada exitosamente\n");
+printf("particion cargada exitosamente\n");
 }
 
 }
@@ -411,13 +449,10 @@ int  fdsik_normal_logico(int size,char path[],char fit,char name[]){
 struct Master_Boot_Record principal;
  FILE* archivo;
  int posicion = 0;
-struct Extended_Boot_Record nuevo;
 struct Extended_Boot_Record aux;
+struct Extended_Boot_Record nuevo;
 struct MBR_particion auxiliar;
-nuevo.tama = size;
-strcpy(nuevo.nom,name);
-archivo=fopen(path,"r+b");
-  if(archivo){
+archivo=fopen(path,"rb");
 fseek(archivo,0,SEEK_SET);
 fread(&principal,1,sizeof(struct Master_Boot_Record),archivo);
 for(int i =0;i<4;i++){
@@ -425,43 +460,50 @@ if(principal.particion[i].type=='E'){
 auxiliar = principal.particion[i];
 }}
 int tama_ext = auxiliar.part_ini+auxiliar.size;
-fseek(archivo,0,auxiliar.part_ini);
+fseek(archivo,auxiliar.part_ini,SEEK_SET);
 fread(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
-if(aux.status=='I'){
-aux.inicio_E = auxiliar.part_ini; //bit de inicio asignado
-int total_logico = aux.inicio_E+size;
-if(total_logico>tama_ext){
 fclose(archivo);
+if(aux.status=='I'){
+nuevo.inicio_E = auxiliar.part_ini; //bit de inicio asignado
+nuevo.tama = size;
+int total_logico = nuevo.inicio_E+size;
+if(total_logico>tama_ext){
 return 1; //error 1 el tamaño excede el tamaño de la particion logica
 }
 else{
-aux.tama = size; //tamaño asignado
-strcpy(aux.nom,name);//nombre asignado
-aux.fit = fit; //tipo de asignacion
-aux.status ='A';// status
+strcpy(nuevo.nom,name);//nombre asignado
+nuevo.fit = fit; //tipo de asignacion
+nuevo.status ='A';// status
 int libre = tama_ext - total_logico;
 if(libre<2000000){ //siguiente asignado
-aux.sig = -1;
+nuevo.sig = -1;
 }
-else{aux.sig=total_logico;}
-fseek(archivo,0,auxiliar.part_ini);
-fwrite(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
-if(aux.sig!=-1){
+else{
+printf("\nlibre:%i\n",libre);
+nuevo.sig=nuevo.inicio_E+nuevo.tama;}
+int numero = nuevo.sig;
+archivo=fopen(path,"rb+");
+fseek(archivo,auxiliar.part_ini,SEEK_SET);
+int b =fwrite(&nuevo,sizeof(Extended_Boot_Record),1,archivo);
+if(numero!=-1){
+printf("tamaño write:%i +sig:%i\n",b,nuevo.sig);
 struct Extended_Boot_Record nuevo_extra;
 nuevo_extra.status = 'I';
-fseek(archivo,0,aux.sig);
-fwrite(&nuevo_extra,1,sizeof(struct Extended_Boot_Record),archivo);
+fseek(archivo,numero,SEEK_SET);
+fwrite(&nuevo_extra,sizeof(struct Extended_Boot_Record),1,archivo);
 }
-printf("nombre archivo: %s + bit inicio:%i status:%c\n",aux.nom,aux.inicio_E,aux.status);
+fclose(archivo);
+return 0;
 }
 }
 else{
 int encontrado = 0;
+archivo=fopen(path,"r+b");
 while(encontrado==0){
+printf("sig:%i + aux:%c",aux.sig,aux.status);
 int bit_ini = aux.sig;
 if(bit_ini!=-1){
-void rewind (archivo);
-fseek(archivo,0,bit_ini);
+fseek(archivo,bit_ini,SEEK_SET);
 fread(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
 if(aux.status=='I'){
 aux.inicio_E = bit_ini;
@@ -488,17 +530,19 @@ if(libre<2000000){ //siguiente asignado
 aux.sig = -1;
 }
 else{aux.sig=total_logico;}
-void rewind (archivo);
-fseek(archivo,0,aux.inicio_E);
+archivo=fopen(path,"r+b");
+fseek(archivo,aux.inicio_E,SEEK_SET);
 fwrite(&aux,1,sizeof(struct Extended_Boot_Record),archivo);
 if(aux.sig!=-1){
 struct Extended_Boot_Record nuevo_extra;
 nuevo_extra.status = 'I';
 void rewind (archivo);
-fseek(archivo,0,aux.sig);
+fseek(archivo,aux.sig,SEEK_SET);
 fwrite(&nuevo_extra,1,sizeof(struct Extended_Boot_Record),archivo);
 }
-printf("nombre archivo: %s + bit inicio:%i bit siguiente:%i\n",aux.nom,aux.inicio_E,aux.sig);
+printf("\nnombre archivo: %s + bit inicio:%i bit siguiente:%i\n",aux.nom,aux.inicio_E,aux.sig);
+fclose(archivo);
+return 0;
 }
 }
 else{
@@ -506,9 +550,7 @@ fclose(archivo);
 return 2; //no se pueden crear mas particiones Logicas
 }
 }
-}
-fclose(archivo);
-return 0;
+
 }
 void accion_fdisk_normal(int size,int unit,char path[],int type,int fit,char name[]){
 FILE* archivo;
@@ -625,7 +667,7 @@ archivo= fopen(path,"r+b");
 fseek(archivo,0,SEEK_SET);
 fwrite(&prueba,1,sizeof(struct Master_Boot_Record),archivo);
 void rewind (archivo);
-fseek(archivo,0,nuevo.part_ini);
+fseek(archivo,nuevo.part_ini,SEEK_SET);
 fwrite(&logicon,1,sizeof(struct Extended_Boot_Record),archivo);
 fclose(archivo);
 printf("\nparticion creada exitosamente\n");
@@ -691,6 +733,7 @@ char c=getchar();
 if((c)=='s'||(c)=='S'){int a = remove(path);
 if(a==0){
 printf("\n eliminado exitosamente\n");
+getchar();
 }else{
 printf("\n no eliminado\n");}
 }
@@ -698,7 +741,6 @@ else{printf("\n no eliminado\n");}
 }else{
 printf("\nel archivo no existe\n");
 }
-getchar();
 }
 void accion_mkdisk(int size,char path[],char nom[],int unit){
 if(unit==0&&size<10000||unit==1&&size<10){
@@ -1008,7 +1050,7 @@ sec++;
 i++;
 }
 FILE* archivo;
-archivo=fopen(un,"r+b");
+archivo=fopen(un,"rb");
 if(archivo){
 int a = fclose(archivo);
 if(a ==0){path=un;
