@@ -48,10 +48,10 @@ int s_block_start; //inicio de la tabla de bloques
 typedef struct Journaling{
 char tipo_operacion[20]; //añadir/eliminar/modificar archivo/carpeta
 int tipo; //0 archivo y 1 carpeta;
-char name[100]; //nombre del archvio
-char conte[300]; //contenido
+char name[20]; //nombre del archvio
+char conte[320]; //contenido
 int dia;int mes; int anio; //fecha
-char propietario[100]; //propietario del archivo
+char propietario[75]; //propietario del archivo
 int permisos; //permisos
 }Journaling;
 typedef struct T_inodo{
@@ -75,10 +75,10 @@ struct B_content b_contenido[4]; //contenido de apuntadores a inodos
 }T_bloque;
 typedef struct B_arch{
 char b_contenido[64]; //contenido del archivo solo 64 bits por bloque
-}
+}B_arch;
 typedef struct Indirect_Po{
 int b_pointers[16];//bloque inidirecto que apunta a carpeta o archivo
-}
+} Indirect_Po;
 typedef struct montados{
 char path[100];
 char name[16];
@@ -87,9 +87,28 @@ int num;
 struct montados *sig;
 }montados;
 montados *Ini_mont;
-
-void imprimir_rashos(char path[]){
-
+int calcular_n_ext2(int T,int S,int I,int B){
+float n1 = T-S;
+int dividir= 4+I+3*B;
+n1 = n1/dividir;
+int n = floor(n1);
+return n;
+}
+int calcular_n_ext3(int T,int S,int I,int B,int J){
+float n1 = T-S;
+int dividir= 4+I+3*B+J;
+n1 = n1/dividir;
+int n = floor(n1);
+return n;
+}
+void imprimir_rashos(int tam){
+printf("tamaño superbloque:%i\n",sizeof(struct Super_bloque));
+printf("tamaño inodo:%i\n",sizeof(struct T_inodo));
+printf("tamaño bloque:%i\n",sizeof(struct T_bloque));
+printf("tamaño Journaling:%i\n",sizeof(struct Journaling));
+int a = calcular_n_ext2(tam,sizeof(struct Super_bloque),sizeof(struct T_inodo),sizeof(struct T_bloque));
+int b = calcular_n_ext3(tam,sizeof(struct Super_bloque),sizeof(struct T_inodo),sizeof(struct T_bloque),sizeof(Journaling));
+printf("tamaño ext2:%i\ntamaño ext3:%i\n",a,b);
 }
 void rep_disk(char path[],char name[],char id[]){
 montados *auxiliar;
@@ -1352,6 +1371,11 @@ int analizar_cadena(char cadena[]){
    pch = strtok (NULL,"\n");
    cadena = pch;
    fue_rep(cadena,"","","");
+   }
+   else if(strcmp(pch,"df")==0){
+   pch = strtok (NULL,"\n");
+   cadena = pch;
+   imprimir_rashos(2000000);
    }
    else if(*pch=='#'){}
    else{
